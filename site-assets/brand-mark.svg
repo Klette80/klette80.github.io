@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Ludus Digitalis">
+  <rect x="1" y="1" width="62" height="62" rx="4" fill="#0d1920" stroke="#c6964b"/>
+  <path d="M23 13c-5 11-5 30 9 38 14-8 14-27 9-38M25 18h14M22 48h20M28 19v25M32 19v28M36 19v25" fill="none" stroke="#e2bf7b" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M19 11c-3 8-2 12 4 15M45 11c3 8 2 12-4 15" fill="none" stroke="#c6964b" stroke-width="2.3" stroke-linecap="round"/>
+</svg>

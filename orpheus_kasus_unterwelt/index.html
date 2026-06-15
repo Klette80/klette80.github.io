@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orpheus: Die Kasus der Unterwelt</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" role="img">
+            <path d="M18.6 3.9c4.3 2.4 7.2 7 7.2 12.1 0 5.6-3.3 10.4-8.1 12.6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M13 5.4v17.8c0 2.1-1.8 3.8-4 3.8s-4-1.7-4-3.8 1.8-3.8 4-3.8c.9 0 1.8.3 2.5.8V7.1l9.6-2.7v4.1L13 10.7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <h1>Orpheus: Die Kasus der Unterwelt</h1>
+          <p>Latein-RPG zu Deklinationen und Mythoswissen</p>
+        </div>
+      </div>
+
+      <div class="hud" aria-label="Spielstatus">
+        <div class="meter">
+          <span>Lebenspunkte</span>
+          <div id="hpTrack" class="pips"></div>
+        </div>
+        <div class="meter">
+          <span>Lyra</span>
+          <div class="bar"><i id="manaBar"></i></div>
+        </div>
+        <div id="streakMeter" class="meter compact">
+          <span id="streakLabel">Serie</span>
+          <strong id="streakValue">0</strong>
+        </div>
+      </div>
+    </header>
+
+    <main class="game-grid">
+      <section class="scene-panel" aria-label="Szene">
+        <img src="assets/orpheus-styx.png" alt="Orpheus am Ufer des Styx in der Unterwelt">
+        <div class="scene-gradient"></div>
+        <div class="scene-caption">
+          <span id="realmKicker">Level 1</span>
+          <h2 id="realmTitle">Ufer des Styx</h2>
+          <p id="realmLore">Charon verlangt sichere Formen, bevor die Fahrt beginnt.</p>
+        </div>
+      </section>
+
+      <section class="play-panel" aria-live="polite">
+        <nav class="level-map" id="levelMap" aria-label="Levelpfad"></nav>
+
+        <div id="storyPanel" class="story-panel">
+          <div id="cutsceneStage" class="cutscene-stage" data-scene="styx">
+            <div class="cutscene-backdrop" aria-hidden="true"></div>
+            <div class="cutscene-fog fog-one" aria-hidden="true"></div>
+            <div class="cutscene-fog fog-two" aria-hidden="true"></div>
+            <div class="cutscene-torch torch-left" aria-hidden="true"><i></i></div>
+            <div class="cutscene-torch torch-right" aria-hidden="true"><i></i></div>
+
+            <figure id="actorLeft" class="cutscene-actor actor-left" hidden>
+              <img id="actorLeftImage" alt="">
+              <span class="actor-mouth" aria-hidden="true"></span>
+              <figcaption id="actorLeftName"></figcaption>
+            </figure>
+            <figure id="actorRight" class="cutscene-actor actor-right" hidden>
+              <img id="actorRightImage" alt="">
+              <span class="actor-mouth" aria-hidden="true"></span>
+              <figcaption id="actorRightName"></figcaption>
+            </figure>
+
+            <div class="cutscene-dialogue">
+              <div class="cutscene-heading">
+                <span id="storyModeLabel">Zwischensequenz</span>
+                <span id="cutsceneProgress">1/3</span>
+              </div>
+              <h2 id="storyTitle">Die erste Schwelle</h2>
+              <strong id="storySpeaker" class="story-speaker">Charon</strong>
+              <p id="storyText" class="typewriter-text" aria-live="off"></p>
+              <div id="cultureNote" class="culture-note" hidden>
+                <strong>Mythoswissen</strong>
+                <p id="storyCulture"></p>
+              </div>
+              <section id="memoryQuestion" class="memory-question" hidden aria-labelledby="memoryPrompt">
+                <span>Rekonstruiere die Erinnerung</span>
+                <p id="memoryPrompt"></p>
+                <div id="memoryChoices" class="memory-choices"></div>
+                <div id="memoryResult" class="memory-result" hidden></div>
+              </section>
+              <section id="dialogueDecision" class="dialogue-decision" hidden aria-labelledby="dialoguePrompt">
+                <span>Orpheus antwortet</span>
+                <p id="dialoguePrompt"></p>
+                <div id="dialogueChoices" class="dialogue-choices"></div>
+                <div id="dialogueResult" class="dialogue-result" hidden></div>
+              </section>
+              <div class="cutscene-controls">
+                <button id="storySkipButton" class="story-skip" type="button">Überspringen</button>
+                <button id="storyButton" type="button">Weiter</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="encounter" class="encounter" hidden>
+          <div class="enemy-card">
+            <div class="enemy-icon" id="enemyIcon" aria-hidden="true"></div>
+            <div>
+              <span id="enemyLabel">Charons Probe</span>
+              <div class="enemy-health" aria-label="Gegnerische Willenskraft">
+                <i id="enemyHealth"></i>
+              </div>
+            </div>
+          </div>
+
+          <div class="task-card">
+            <div class="task-meta">
+              <span id="declensionTag">a-Deklination</span>
+              <span id="taskProgress">Aufgabe 1/5</span>
+            </div>
+            <h3 id="taskTitle">Aufgabe</h3>
+            <p id="taskPrompt"></p>
+            <p id="taskMeaning" class="noun-meaning"></p>
+          </div>
+
+          <div class="answer-zone">
+            <div id="choiceGrid" class="choice-grid"></div>
+            <form id="inputForm" class="input-form" autocomplete="off">
+              <label for="typedAnswer">Form eintippen</label>
+              <div>
+                <input id="typedAnswer" name="typedAnswer" type="text" inputmode="latin" spellcheck="false">
+                <button type="submit">Wirken</button>
+              </div>
+            </form>
+            <div id="feedback" class="feedback neutral">Wähle eine Antwort, um den Klang der Lyra zu formen.</div>
+          </div>
+        </div>
+
+        <div id="bossPanel" class="boss-panel" hidden>
+          <div class="boss-head">
+            <div>
+              <span>Bosskampf</span>
+              <h2 id="bossTitle">Charons Ruderschlag</h2>
+            </div>
+            <div class="boss-stats">
+              <strong id="bossTimer">18s</strong>
+              <span id="bossScore">0/4</span>
+            </div>
+          </div>
+          <p id="bossInstruction"></p>
+          <div class="boss-prompt">
+            <span>Geforderter Klang</span>
+            <strong id="bossPrompt">puella: Akk. Sg.</strong>
+            <small id="bossMeaning" class="noun-meaning"></small>
+          </div>
+          <div id="noteSheet" class="note-sheet" aria-label="Bewegtes Notenblatt"></div>
+          <div id="bossHint" class="boss-hint">Klicke die richtige Endung, bevor die Zeit endet. Die Hilfszauber sind im Bosskampf gesperrt.</div>
+        </div>
+
+        <section id="questPanel" class="sidequest-panel" hidden aria-labelledby="questTitle">
+          <div class="sidequest-head">
+            <div>
+              <span id="questKicker">Nebenquest</span>
+              <h2 id="questTitle">Die Last der Verdammten</h2>
+            </div>
+            <div class="sidequest-stats" aria-label="Questfortschritt">
+              <strong id="questTimer">Optional</strong>
+              <span id="questScore">0/5</span>
+            </div>
+          </div>
+
+          <div id="questOffer" class="quest-offer">
+            <figure class="quest-portrait">
+              <img id="questPortrait" src="assets/sisyphus-portrait.png" alt="">
+            </figure>
+            <div class="quest-offer-copy">
+              <p id="questIntro"></p>
+              <div class="quest-myth">
+                <strong>Ovidischer Hintergrund</strong>
+                <p id="questCulture"></p>
+              </div>
+              <div class="quest-actions">
+                <button id="questDecline" class="quest-secondary" type="button">Weitergehen</button>
+                <button id="questAccept" type="button">Helfen</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="questGame" class="quest-game" hidden>
+            <div class="quest-prompt">
+              <span id="questRound">Runde 1/5</span>
+              <h3 id="questPrompt"></h3>
+              <p id="questMeaning" class="noun-meaning"></p>
+            </div>
+
+            <div id="sisyphusGame" class="sisyphus-game" hidden>
+              <div class="stone-track" aria-label="Druck des Felsens">
+                <div class="stone-symbol" aria-hidden="true"></div>
+                <div class="pressure-rail"><i id="questPressure"></i></div>
+                <span>Felsdruck</span>
+              </div>
+              <div id="cascadeOptions" class="cascade-options" aria-label="Fallende Endungen"></div>
+            </div>
+
+            <div id="danaidGame" class="danaid-game" hidden>
+              <div class="form-stream">
+                <span>Vorbeiströmende Form</span>
+                <strong id="streamForm">aquīs</strong>
+              </div>
+              <div id="vesselOptions" class="vessel-options" aria-label="Gefäße für Kasus und Numerus"></div>
+            </div>
+
+            <div id="ixionGame" class="ixion-game" hidden>
+              <div class="wheel-target">
+                <span>Trefferzone</span>
+              </div>
+              <div id="ixionWheel" class="ixion-wheel" aria-label="Rotierendes Rad der Endungen">
+                <div class="wheel-hub" aria-hidden="true"></div>
+              </div>
+              <button id="ixionStrike" class="ixion-strike" type="button">Saitenschlag</button>
+            </div>
+
+            <div id="charonGame" class="charon-game" hidden>
+              <div class="river-course" aria-label="Charons Boot zwischen Formtoren">
+                <div class="river-current current-one" aria-hidden="true"></div>
+                <div class="river-current current-two" aria-hidden="true"></div>
+                <div class="ferry-boat" aria-hidden="true">
+                  <span></span>
+                </div>
+                <div id="ferryGates" class="ferry-gates"></div>
+              </div>
+              <p class="ferry-instruction">Steuere Charons Boot durch das Tor mit der richtigen Form.</p>
+            </div>
+
+            <div id="questFeedback" class="feedback neutral">Wähle den richtigen Klang.</div>
+          </div>
+
+          <div id="questResult" class="quest-result" hidden>
+            <span id="questResultLabel">Nebenquest abgeschlossen</span>
+            <h3 id="questResultTitle"></h3>
+            <p id="questResultText"></p>
+            <div id="questReward" class="quest-reward"></div>
+            <button id="questContinue" type="button">Den Weg fortsetzen</button>
+          </div>
+        </section>
+
+        <section id="endingPanel" class="ending-panel" hidden aria-labelledby="endingTitle">
+          <div class="ending-head">
+            <div>
+              <span id="endingKicker">Letzte Prüfung</span>
+              <h2 id="endingTitle">Der Aufstieg</h2>
+            </div>
+            <div class="ending-stats" aria-label="Fortschritt des Aufstiegs">
+              <strong id="ascentTimer">40s</strong>
+              <span id="ascentScore">0/6</span>
+            </div>
+          </div>
+
+          <div id="ascentGame" class="ascent-game">
+            <div class="ascent-scene" aria-hidden="true">
+              <div class="ascent-light"></div>
+              <div class="ascent-path">
+                <i></i><i></i><i></i><i></i><i></i><i></i>
+              </div>
+              <div class="ascent-figures">
+                <span class="ascent-orpheus"></span>
+                <span class="ascent-eurydice"></span>
+              </div>
+              <div class="doubt-meter">
+                <span>Zweifel</span>
+                <div><i id="doubtFill"></i></div>
+              </div>
+            </div>
+            <div class="ascent-prompt">
+              <span id="ascentRound">Schritt 1/6</span>
+              <h3 id="ascentPrompt"></h3>
+              <p id="ascentMeaning" class="noun-meaning"></p>
+            </div>
+            <div id="ascentChoices" class="ascent-choices"></div>
+            <div id="ascentFeedback" class="feedback neutral">Höre auf die Schritte hinter dir und halte die Form.</div>
+          </div>
+
+          <div id="endingResult" class="ending-result" hidden>
+            <div class="ending-portrait-stage">
+              <img id="endingLeftPortrait" src="assets/orpheus-styx.png" alt="Orpheus mit seiner Lyra">
+              <div class="ending-seal" aria-hidden="true"><span></span></div>
+              <img id="endingRightPortrait" src="assets/eurydice-portrait.png" alt="Eurydike als schattenhafte Gestalt">
+            </div>
+            <span id="endingCanonLabel" class="ending-canon-label">Ovidischer Ausgang</span>
+            <h3 id="endingResultTitle"></h3>
+            <p id="endingResultText"></p>
+            <blockquote class="ending-witness">
+              <strong id="endingWitness"></strong>
+              <p id="endingWitnessText"></p>
+            </blockquote>
+            <div class="ending-source">
+              <strong>Mythologische Einordnung</strong>
+              <p id="endingSource"></p>
+            </div>
+            <div id="endingFactors" class="ending-factors"></div>
+            <button id="endingRestart" type="button">Eine neue Schicksalslinie beginnen</button>
+          </div>
+        </section>
+
+        <div class="skill-row" aria-label="Fertigkeiten">
+          <button id="hintSkill" class="skill-button" type="button">
+            <span>Hermes</span>
+            Hinweis
+          </button>
+          <button id="tableSkill" class="skill-button" type="button">
+            <span>Mnemosyne</span>
+            Tabelle
+          </button>
+          <button id="graceSkill" class="skill-button" type="button">
+            <span>Persephone</span>
+            Gnade
+          </button>
+        </div>
+      </section>
+
+      <aside class="codex-panel" aria-label="Mythos-Codex">
+        <div class="codex-head">
+          <h2>Mythos-Codex</h2>
+          <span id="codexCount">0/5</span>
+        </div>
+        <section id="decisionChronicle" class="decision-chronicle" hidden>
+          <div class="decision-chronicle-head">
+            <h3>Orpheus' Haltung</h3>
+            <span id="decisionCount">0/3</span>
+          </div>
+          <div id="decisionList" class="decision-list"></div>
+        </section>
+        <section id="questChronicle" class="quest-chronicle" hidden>
+          <div class="quest-chronicle-head">
+            <h3>Pfad der Verdammten</h3>
+            <span id="questCount">0/4</span>
+          </div>
+          <div id="questList" class="quest-list"></div>
+        </section>
+        <section id="fateArchive" class="fate-archive">
+          <div class="fate-archive-head">
+            <h3>Schicksalsarchiv</h3>
+            <span id="fateCount">0/4</span>
+          </div>
+          <div id="fateList" class="fate-list"></div>
+        </section>
+        <div id="codexList" class="codex-list"></div>
+      </aside>
+    </main>
+
+    <footer class="footer-actions">
+      <button id="restartButton" type="button">Neues Spiel</button>
+      <button id="nextButton" type="button" class="primary" disabled>Nächster Klang</button>
+    </footer>
+  </div>
+
+  <dialog id="tableDialog" class="modal">
+    <div class="modal-card">
+      <button id="closeDialog" class="icon-button" type="button" aria-label="Schließen">×</button>
+      <h2 id="modalTitle">Deklinationstafel</h2>
+      <div id="modalContent"></div>
+    </div>
+  </dialog>
+
+  <div id="difficultyOverlay" class="difficulty-overlay" role="dialog" aria-modal="true" aria-labelledby="difficultyTitle">
+    <section class="difficulty-card">
+      <div class="difficulty-heading">
+        <span>Wähle deinen Rang</span>
+        <h2 id="difficultyTitle">Wie tief wagst du dich?</h2>
+        <p>Der Rang bestimmt, welche Deklinationsklassen während der gesamten Reise und in den Bosskämpfen abgefragt werden.</p>
+      </div>
+      <div class="difficulty-options">
+        <button class="difficulty-option" type="button" data-difficulty="novice">
+          <span class="rank-number">I</span>
+          <strong>Novize</strong>
+          <small>a-, o- und e-Deklination</small>
+        </button>
+        <button class="difficulty-option" type="button" data-difficulty="legionary">
+          <span class="rank-number">II</span>
+          <strong>Legionär</strong>
+          <small>Novize plus 3. Deklination</small>
+        </button>
+        <button class="difficulty-option" type="button" data-difficulty="centurion">
+          <span class="rank-number">III</span>
+          <strong>Centurio</strong>
+          <small>Alle Klassen einschließlich u-Deklination</small>
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <div id="gameOverOverlay" class="game-over-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="gameOverTitle">
+    <div class="game-over-card">
+      <div class="game-over-seal" aria-hidden="true">
+        <svg viewBox="0 0 64 64">
+          <path d="M18 9c-5 12-3 35 14 45 17-10 19-33 14-45M22 14h20M20 49h24M26 15v29M32 14v34M38 15v29" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+          <path d="M13 19 51 45M51 19 13 45" fill="none" stroke="currentColor" stroke-width="2" opacity=".5"/>
+        </svg>
+      </div>
+      <span>Die Melodie verstummt</span>
+      <h2 id="gameOverTitle">Ludus finitus est</h2>
+      <p id="gameOverReason">Orpheus hat seine letzten Lebenspunkte verloren.</p>
+      <div id="gameOverProgress" class="game-over-progress"></div>
+      <button id="gameOverRestart" type="button">Erneut hinabsteigen</button>
+    </div>
+  </div>
+
+  <script src="nouns.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
