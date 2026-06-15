@@ -1,9 +1,9 @@
 .DS_Store
 Thumbs.db
-assets/
-latein_lernportal_mit_bildern/
-output/
-social-scoring-app/
-social-scoring-app-v1.zip
-start.ps1.txt
-tools/
+/assets/
+/latein_lernportal_mit_bildern/
+/output/
+/social-scoring-app/
+/social-scoring-app-v1.zip
+/start.ps1.txt
+/tools/
