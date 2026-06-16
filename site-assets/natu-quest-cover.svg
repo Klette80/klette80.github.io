@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 540" role="img" aria-label="NaTu-Quest – Lernspiel für Natur und Technik">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0d1920"/>
+      <stop offset="1" stop-color="#071016"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="42%" r="60%">
+      <stop offset="0" stop-color="#c6964b" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#c6964b" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="800" height="540" fill="url(#bg)"/>
+  <rect width="800" height="540" fill="url(#glow)"/>
+
+  <!-- dotted constellation grid -->
+  <g fill="#e2bf7b" opacity="0.22">
+    <circle cx="90" cy="80" r="2"/><circle cx="180" cy="120" r="1.6"/><circle cx="710" cy="90" r="2"/>
+    <circle cx="640" cy="150" r="1.6"/><circle cx="120" cy="440" r="1.6"/><circle cx="700" cy="430" r="2"/>
+    <circle cx="60" cy="270" r="1.6"/><circle cx="745" cy="300" r="1.6"/>
+  </g>
+
+  <g fill="none" stroke="#c6964b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <!-- DNA double helix (left) -->
+    <g transform="translate(150 270)">
+      <path d="M-40 -150 C 60 -110, 60 -40, -40 0 C -140 40, -140 110, -40 150" opacity="0.95"/>
+      <path d="M40 -150 C -60 -110, -60 -40, 40 0 C 140 40, 140 110, 40 150" opacity="0.95"/>
+      <line x1="-34" y1="-120" x2="34" y2="-120" opacity="0.6"/>
+      <line x1="-2" y1="-78" x2="2" y2="-78" opacity="0"/>
+      <line x1="-38" y1="-78" x2="38" y2="-78" opacity="0.6"/>
+      <line x1="-30" y1="-30" x2="30" y2="-30" opacity="0.6"/>
+      <line x1="-38" y1="78" x2="38" y2="78" opacity="0.6"/>
+      <line x1="-30" y1="30" x2="30" y2="30" opacity="0.6"/>
+      <line x1="-34" y1="120" x2="34" y2="120" opacity="0.6"/>
+    </g>
+
+    <!-- Atom (top right) -->
+    <g transform="translate(600 180)">
+      <circle cx="0" cy="0" r="9" fill="#e2bf7b" stroke="none"/>
+      <ellipse cx="0" cy="0" rx="70" ry="26"/>
+      <ellipse cx="0" cy="0" rx="70" ry="26" transform="rotate(60)"/>
+      <ellipse cx="0" cy="0" rx="70" ry="26" transform="rotate(120)"/>
+    </g>
+
+    <!-- Leaf (bottom center) -->
+    <g transform="translate(430 400)">
+      <path d="M0 60 C -70 30, -60 -50, 30 -60 C 40 30, -10 50, 0 60 Z"/>
+      <path d="M0 58 C 2 20, 14 -20, 28 -54" opacity="0.7"/>
+      <path d="M6 24 L -22 8 M10 0 L -16 -16" opacity="0.5"/>
+    </g>
+
+    <!-- Erlenmeyer flask (bottom right) -->
+    <g transform="translate(640 380)">
+      <path d="M-12 -40 L -12 -14 L -34 34 A8 8 0 0 0 -27 46 L 27 46 A8 8 0 0 0 34 34 L 12 -14 L 12 -40 Z"/>
+      <line x1="-18" y1="-40" x2="18" y2="-40"/>
+      <path d="M-24 18 L 24 18" opacity="0.6"/>
+      <circle cx="-6" cy="30" r="3" fill="#e2bf7b" stroke="none" opacity="0.8"/>
+      <circle cx="10" cy="34" r="2.4" fill="#e2bf7b" stroke="none" opacity="0.8"/>
+    </g>
+  </g>
+
+  <!-- wordmark -->
+  <g font-family="Georgia, 'Times New Roman', serif" text-anchor="middle">
+    <text x="400" y="120" fill="#f3e7cf" font-size="58" font-weight="500" letter-spacing="1">NaTu-Quest</text>
+    <text x="400" y="158" fill="#aeb8bc" font-size="21" font-family="Segoe UI, Arial, sans-serif" letter-spacing="3">NATUR &amp; TECHNIK · KLASSE 5 &amp; 6</text>
+  </g>
+</svg>

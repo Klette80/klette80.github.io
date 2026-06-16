@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NaTu-Quest – Das NuT-Lernabenteuer (Jgst. 5/6)</title>
+<style>
+  :root{
+    --bg:#0f1226; --bg2:#181c3a; --card:#1f2450; --card2:#272d63;
+    --ink:#eef1ff; --muted:#a6acdb; --accent:#5ad1ff; --accent2:#ffd34d;
+    --good:#37d67a; --bad:#ff5d6c; --line:#3a4080;
+    --w0:#ff7a8a; --w1:#5fd97a; --w2:#ffb14d; --w3:#7aa2ff; --w4:#c58bff;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:"Segoe UI",system-ui,Arial,sans-serif;
+    background:radial-gradient(1200px 700px at 50% -10%,#23295c,#0f1226 60%);
+    color:var(--ink);min-height:100vh;overflow-x:hidden}
+  .wrap{max-width:760px;margin:0 auto;padding:18px 16px 60px}
+  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+  h1{font-size:clamp(26px,6vw,40px);margin:.2em 0;letter-spacing:.5px}
+  .tag{color:var(--muted);font-size:14px}
+  .btn{cursor:pointer;border:none;border-radius:14px;padding:14px 18px;font-size:16px;
+    font-weight:700;color:#08122a;background:var(--accent);transition:.12s transform,.12s filter;}
+  .btn:hover{filter:brightness(1.08)} .btn:active{transform:translateY(2px)}
+  .btn.alt{background:var(--accent2)}
+  .btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line)}
+  .card{background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--line);
+    border-radius:20px;padding:20px;box-shadow:0 18px 40px rgba(0,0,0,.35)}
+  .hidden{display:none!important}
+  /* HUD */
+  .hud{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px;font-size:14px}
+  .pill{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:7px 12px;font-weight:700;display:flex;gap:6px;align-items:center}
+  .hearts{letter-spacing:2px;font-size:18px}
+  .bar{height:10px;background:#11132c;border-radius:999px;overflow:hidden;flex:1;min-width:120px;border:1px solid var(--line)}
+  .bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0;transition:width .3s}
+  /* world map */
+  .worlds{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
+  @media(max-width:560px){.worlds{grid-template-columns:1fr}}
+  .world{position:relative;border-radius:18px;padding:18px;cursor:pointer;color:#08122a;font-weight:700;
+    border:2px solid rgba(255,255,255,.25);transition:.12s transform}
+  .world:hover{transform:translateY(-3px)} .world.locked{filter:grayscale(.7) brightness(.7);cursor:not-allowed}
+  .world small{display:block;font-weight:600;opacity:.85;margin-top:4px;font-size:13px}
+  .world .stars{font-size:18px;margin-top:8px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4)}
+  .w0{background:var(--w0)} .w1{background:var(--w1)} .w2{background:var(--w2)} .w3{background:var(--w3)} .w4{background:var(--w4)}
+  /* question */
+  .qmeta{display:flex;justify-content:space-between;color:var(--muted);font-size:13px;margin-bottom:8px}
+  .abtag{padding:3px 10px;border-radius:999px;font-weight:700}
+  .ab1{background:#1d5b3a;color:#aef5c8}.ab2{background:#5b4a1d;color:#ffe4a3}.ab3{background:#5b1d4a;color:#ffb3e6}
+  .qtext{font-size:clamp(18px,4.5vw,23px);font-weight:700;line-height:1.35;margin:6px 0 16px}
+  .ans{display:grid;gap:10px}
+  .opt{text-align:left;background:var(--card);border:2px solid var(--line);color:var(--ink);
+    border-radius:14px;padding:14px 16px;font-size:16px;cursor:pointer;transition:.1s}
+  .opt:hover{border-color:var(--accent)} .opt:active{transform:translateY(1px)}
+  .opt.correct{border-color:var(--good);background:#143a26}
+  .opt.wrong{border-color:var(--bad);background:#3a1620}
+  .opt.dim{opacity:.4}
+  .opt.disabled{pointer-events:none}
+  .feedback{margin-top:14px;padding:14px;border-radius:14px;border:1px solid var(--line);background:#11142f;font-size:15px;line-height:1.45}
+  .feedback b{color:var(--accent2)}
+  .combo{position:fixed;top:18px;left:50%;transform:translateX(-50%);font-weight:900;font-size:26px;
+    color:var(--accent2);text-shadow:0 2px 10px rgba(0,0,0,.5);pointer-events:none;opacity:0;transition:.3s}
+  .combo.show{opacity:1;animation:pop .5s}
+  @keyframes pop{0%{transform:translateX(-50%) scale(.5)}50%{transform:translateX(-50%) scale(1.25)}100%{transform:translateX(-50%) scale(1)}}
+  /* powerups */
+  .powers{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+  .pw{flex:1;min-width:120px;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:10px;cursor:pointer;text-align:center;font-size:13px;font-weight:700;transition:.1s}
+  .pw:hover{border-color:var(--accent2)} .pw .cost{display:block;color:var(--accent2);font-size:12px;margin-top:2px}
+  .pw.disabled{opacity:.4;pointer-events:none}
+  /* summary / achievements */
+  .stars-big{font-size:48px;text-align:center;margin:10px 0;color:var(--accent2)}
+  .badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-top:12px}
+  .badge{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center;font-size:13px;font-weight:700}
+  .badge.off{opacity:.3}.badge .ic{font-size:26px;display:block}
+  .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+  .center{text-align:center}
+  canvas#cf{position:fixed;inset:0;pointer-events:none;z-index:50}
+  .footer{margin-top:26px;color:var(--muted);font-size:12px;text-align:center;line-height:1.6}
+  a{color:var(--accent)}
+  .nameField{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;margin:6px 0 14px}
+  .nameField input{background:#11142f;border:2px solid var(--line);color:var(--ink);border-radius:12px;
+    padding:12px 14px;font-size:16px;width:240px;max-width:70vw}
+  .nameField input:focus{outline:none;border-color:var(--accent)}
+  table.lb{width:100%;border-collapse:collapse;font-size:15px}
+  table.lb th,table.lb td{padding:9px 6px;border-bottom:1px solid var(--line);text-align:left}
+  table.lb th{color:var(--muted);font-weight:700}
+  table.lb td.num,table.lb th.num{text-align:right;font-variant-numeric:tabular-nums}
+  .rank{font-weight:900;font-size:17px}
+  tr.me td{background:#243066}
+</style>
+</head>
+<body>
+<h2 class="sr-only">NaTu-Quest: ein Lernquiz-Spiel für das Fach Natur und Technik der 5. und 6. Klasse mit fünf Themenwelten, Punkten, Leben und Power-ups.</h2>
+<div class="combo" id="combo"></div>
+<canvas id="cf"></canvas>
+<div class="wrap">
+
+  <!-- ===== START ===== -->
+  <div id="start">
+    <div class="center">
+      <h1>🧬 NaTu-Quest</h1>
+      <div class="tag">Das Lernabenteuer für <b>Natur und Technik</b> · Jahrgangsstufe 5 & 6 · Gymnasium Bayern</div>
+    </div>
+    <div class="card" style="margin-top:18px">
+      <p>Reise durch <b>5 Themenwelten</b>, sammle <b>XP, Münzen und Sterne</b>, baue <b>Combo-Ketten</b> auf und besiege die <b>Bosse</b> (Transfer-Fragen). Je weniger Fehler, desto mehr Sterne! 🌟</p>
+      <ul style="color:var(--muted);line-height:1.7;margin:8px 0">
+        <li>❤️ 3 Leben pro Welt – bei 0 musst du die Welt neu starten</li>
+        <li>🔥 Combo-Multiplikator: mehrere richtige Antworten in Folge bringen mehr Punkte</li>
+        <li>🪙 Mit Münzen kaufst du Power-ups: 50:50, Tipp, Extra-Leben</li>
+        <li>🏆 Schalte Achievements frei und knacke deinen Highscore</li>
+      </ul>
+      <div class="nameField">
+        <input id="playerName" type="text" maxlength="20" placeholder="Dein Name (für den Highscore)"
+               onkeydown="if(event.key==='Enter')startGame()">
+        <button class="btn" onclick="startGame()">▶ Spiel starten</button>
+      </div>
+      <div class="row" style="justify-content:center">
+        <button class="btn ghost" onclick="resetAll()">↺ Fortschritt löschen</button>
+      </div>
+    </div>
+    <div class="footer">
+      Lerninhalte: Mensch & Zelle · Pflanzen · Wirbeltiere · Stoffe & Labor · Forschen & Informatik.<br>
+      60 Aufgaben in drei Anforderungsbereichen (Reproduktion · Reorganisation · Transfer).
+    </div>
+  </div>
+
+  <!-- ===== MAP ===== -->
+  <div id="map" class="hidden">
+    <div class="hud">
+      <span class="pill">👤 <span id="mPlayer">–</span></span>
+      <span class="pill">⭐ <span id="mTotalStars">0</span>/15</span>
+      <span class="pill">🏅 Level <span id="mLevel">1</span></span>
+      <span class="pill">🪙 <span id="mCoins">0</span></span>
+      <span class="pill">🏆 Rekord <span id="mHigh">0</span></span>
+    </div>
+    <h1 style="font-size:26px">🗺️ Wähle deine Welt</h1>
+    <div class="worlds" id="worldGrid"></div>
+    <div class="row">
+      <button class="btn ghost" onclick="show('start')">‹ Spieler wechseln</button>
+      <button class="btn alt" onclick="renderBoard()">🏆 Klassen-Highscore</button>
+      <button class="btn alt" onclick="showAch()">🎖️ Achievements</button>
+    </div>
+  </div>
+
+  <!-- ===== GAME ===== -->
+  <div id="game" class="hidden">
+    <div class="hud">
+      <span class="pill" id="hWorld">Welt</span>
+      <span class="pill hearts" id="hHearts">❤️❤️❤️</span>
+      <span class="pill">🪙 <span id="hCoins">0</span></span>
+      <span class="pill">🔥 x<span id="hMult">1</span></span>
+      <span class="pill">⭐ <span id="hScore">0</span></span>
+    </div>
+    <div class="bar"><i id="hBar"></i></div>
+    <div class="card" style="margin-top:14px">
+      <div class="qmeta">
+        <span>Frage <span id="qIdx">1</span>/<span id="qTot">12</span></span>
+        <span class="abtag" id="qAb">AB1</span>
+      </div>
+      <div class="qtext" id="qText">…</div>
+      <div class="ans" id="qAns"></div>
+      <div class="feedback hidden" id="qFb"></div>
+      <div class="powers" id="powers"></div>
+      <div class="row hidden" id="nextRow">
+        <button class="btn" id="nextBtn" onclick="nextQ()">Weiter ›</button>
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn ghost" onclick="quitWorld()">⟵ Welt verlassen</button>
+    </div>
+  </div>
+
+  <!-- ===== SUMMARY ===== -->
+  <div id="summary" class="hidden">
+    <div class="card center">
+      <h1 id="sumTitle">Welt geschafft!</h1>
+      <div class="stars-big" id="sumStars">⭐⭐⭐</div>
+      <p id="sumText"></p>
+      <div class="hud" style="justify-content:center">
+        <span class="pill">⭐ Punkte: <span id="sumScore">0</span></span>
+        <span class="pill">✅ Richtig: <span id="sumRight">0</span></span>
+        <span class="pill">🪙 +<span id="sumCoins">0</span></span>
+        <span class="pill">🏆 Platz <span id="sumRank">–</span></span>
+      </div>
+      <div class="row" style="justify-content:center">
+        <button class="btn" onclick="goMap()">🗺️ Zur Karte</button>
+        <button class="btn alt" onclick="replayWorld()">↺ Nochmal</button>
+        <button class="btn ghost" onclick="renderBoard()">🏆 Highscore</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ACHIEVEMENTS ===== -->
+  <div id="ach" class="hidden">
+    <h1 style="font-size:26px">🏆 Achievements</h1>
+    <div class="card">
+      <div class="badges" id="badgeGrid"></div>
+    </div>
+    <div class="row"><button class="btn ghost" onclick="goMap()">‹ Zurück</button></div>
+  </div>
+
+  <!-- ===== KLASSEN-HIGHSCORE ===== -->
+  <div id="board" class="hidden">
+    <h1 style="font-size:26px">🏆 Klassen-Highscore</h1>
+    <div class="card">
+      <p class="tag" style="margin-top:0">Gewertet wird nach Sternen (max. 15), dann nach Gesamtpunkten. Es zählt die jeweils beste Leistung pro Welt.</p>
+      <div id="lbEmpty" class="center" style="color:var(--muted);padding:14px 0">Noch keine Einträge – spiel eine Welt zu Ende!</div>
+      <div style="overflow-x:auto"><table class="lb" id="lbTable"></table></div>
+    </div>
+    <div class="row">
+      <button class="btn ghost" onclick="goMap()">‹ Zurück</button>
+      <button class="btn ghost" onclick="clearBoard()">🗑️ Highscore leeren</button>
+    </div>
+  </div>
+
+</div>
+<script>
+/* ====================== DATEN ====================== */
+const WORLDS = [
+  {name:"Körper & Zelle", emoji:"🫀", cls:"w0", desc:"Mensch, Zellen, Blut, Skelett, Verdauung"},
+  {name:"Pflanzenreich", emoji:"🌱", cls:"w1", desc:"Pflanzenzelle, Photosynthese, Bestäubung"},
+  {name:"Tierreich", emoji:"🐸", cls:"w2", desc:"Die fünf Wirbeltierklassen"},
+  {name:"Stoffe & Labor", emoji:"🧪", cls:"w3", desc:"Aggregatzustände, Nachweise, Geräte"},
+  {name:"Forscher & Code", emoji:"🔬", cls:"w4", desc:"NaWi-Arbeiten, Diagramme, Informatik"}
+];
+
+// q: Frage, a: Antworten, c: Index der richtigen Antwort, tip: Tipp (Power-up), erkl: Erklärung
+const Q = [
+/* ===== WELT 0: Körper & Zelle ===== */
+{w:0,ab:1,q:"Wo genau findet in der Lunge der Gasaustausch statt?",a:["In den Lungenbläschen","In der Luftröhre","In der Speiseröhre","Im Kehlkopf"],c:0,tip:"Es sind viele winzige Bläschen mit großer Oberfläche.",erkl:"In den Lungenbläschen wandern Sauerstoff- und Kohlenstoffdioxid-Teilchen durch die Zellmembranen ins bzw. aus dem Blut."},
+{w:0,ab:1,q:"Welche zwei Teilchensorten werden beim Gasaustausch ausgetauscht?",a:["Sauerstoff und Kohlenstoffdioxid","Stickstoff und Wasser","Traubenzucker und Fett","Kalk und Stärke"],c:0,tip:"Eines brauchst du zum Atmen, das andere atmest du aus.",erkl:"Sauerstoff geht ins Blut, Kohlenstoffdioxid wird abgegeben – beide wandern durch die Zellmembranen."},
+{w:0,ab:1,q:"Aus welchen zwei Kreisläufen besteht der doppelte Blutkreislauf?",a:["Lungenkreislauf und Körperkreislauf","Herzkreislauf und Hirnkreislauf","Arterienkreislauf und Venenkreislauf","Magenkreislauf und Darmkreislauf"],c:0,tip:"Einer führt zur Lunge, der andere zum restlichen Körper.",erkl:"Lungen- und Körperkreislauf sind über das Herz miteinander verbunden."},
+{w:0,ab:1,q:"Welcher Bestandteil kommt NUR in pflanzlichen Zellen vor, nicht in tierischen?",a:["Chloroplast","Zellkern","Zellmembran","Zellplasma"],c:0,tip:"Er enthält den grünen Farbstoff.",erkl:"Chloroplasten (sowie Zellwand und große Vakuole) sind typisch pflanzlich. Zellkern, Zellmembran und Zellplasma haben beide Zelltypen."},
+{w:0,ab:1,q:"Was reagiert bei der Zellatmung miteinander?",a:["Traubenzucker und Sauerstoff","Kohlenstoffdioxid und Wasser","Stärke und Kalk","Fett und Licht"],c:0,tip:"Die Edukte der Zellatmung – das Gegenteil der Photosynthese.",erkl:"Traubenzucker + Sauerstoff → Kohlenstoffdioxid + Wasser. Dabei wird nutzbare Energie frei."},
+{w:0,ab:1,q:"Welche Aufgabe hat das Herz?",a:["Es pumpt das Blut durch den gesamten Blutkreislauf","Es filtert die Luft","Es speichert Nährstoffe","Es bildet rote Blutkörperchen"],c:0,tip:"Es ist eine Pumpe.",erkl:"Das Herz pumpt das Blut, damit alle Körperzellen mit Nährstoffen und Sauerstoff versorgt werden."},
+{w:0,ab:2,q:"Bringe die Reiz-Reaktions-Kette in die richtige Reihenfolge:",a:["Reiz → Sinnesorgan → Nerven → Gehirn → Reaktion","Reiz → Gehirn → Nerven → Sinnesorgan → Reaktion","Sinnesorgan → Reiz → Reaktion → Gehirn → Nerven","Reaktion → Nerven → Reiz → Gehirn → Sinnesorgan"],c:0,tip:"Erst wird der Reiz aufgenommen, ganz am Ende erfolgt die Reaktion.",erkl:"Im Sinnesorgan wird der Reiz in elektrische Signale umgewandelt, über Nerven zum Gehirn geleitet, verarbeitet – daraus folgt die Reaktion."},
+{w:0,ab:2,q:"Warum braucht ein Muskel immer einen Gegenspieler-Muskel?",a:["Weil er sich nur zusammenziehen, aber nicht selbst wieder strecken kann","Weil zwei Muskeln stärker sind","Weil er sonst zu schnell ermüdet","Weil er sonst keinen Sauerstoff bekommt"],c:0,tip:"Denk an Beuger und Strecker am Arm.",erkl:"Ein Muskel kann sich nur anspannen. Um wieder in die Länge gezogen zu werden, braucht er einen Gegenspieler – das Gegenspielerprinzip."},
+{w:0,ab:2,q:"Warum haben Lungenbläschen und Darmzotten so viele feine Ausstülpungen?",a:["Um eine große Oberfläche für den Austausch zu schaffen","Um leichter zu sein","Um Platz zu sparen","Um Wärme zu speichern"],c:0,tip:"Mehr Fläche = mehr Austausch.",erkl:"Eine große Oberfläche erleichtert den Gasaustausch (Lunge) bzw. die Aufnahme von Nährstoff-Teilchen ins Blut (Darm)."},
+{w:0,ab:2,q:"In welchem Abschnitt werden die meisten Nährstoff-Teilchen ins Blut aufgenommen?",a:["Im Dünndarm","Im Mund","In der Speiseröhre","Im Magen"],c:0,tip:"Hier sitzen die Darmzotten.",erkl:"Bei der Verdauung wird die Nahrung zerlegt; die kleinen Teilchen werden hauptsächlich im Dünndarm ins Blut aufgenommen."},
+{w:0,ab:2,q:"Zu welchem Skelett-Bereich gehört die Wirbelsäule?",a:["Rumpfskelett","Kopfskelett","Armskelett","Beinskelett"],c:0,tip:"Der Rumpf ist der Körperstamm.",erkl:"Zum Rumpfskelett gehören Wirbelsäule, Brustkorb, Schulterblätter, Schlüsselbeine und Becken."},
+{w:0,ab:3,q:"BOSS: Beim schnellen Laufen atmest du schneller und das Herz schlägt schneller. Warum?",a:["Die Muskelzellen brauchen mehr Sauerstoff für die Zellatmung, um Energie zu gewinnen","Der Körper will sich abkühlen","Das Blut wird dadurch dicker","Die Lunge wird dadurch größer"],c:0,tip:"Verbinde Bewegung, Energie und Zellatmung.",erkl:"Bewegung kostet Energie. Diese liefert die Zellatmung (Traubenzucker + Sauerstoff). Mehr Energie = mehr Sauerstoffbedarf → schnelleres Atmen und Pumpen."},
+
+/* ===== WELT 1: Pflanzenreich ===== */
+{w:1,ab:1,q:"Welcher Farbstoff ist für die Photosynthese unbedingt nötig?",a:["Chlorophyll","Hämoglobin","Lugol","Melanin"],c:0,tip:"Er macht Pflanzen grün.",erkl:"Chlorophyll in den Zellen grüner Pflanzen ist für die Photosynthese notwendig."},
+{w:1,ab:1,q:"Was reagiert bei der Photosynthese miteinander (Edukte)?",a:["Kohlenstoffdioxid und Wasser (mit Licht)","Traubenzucker und Sauerstoff","Stärke und Kalk","Fett und Wärme"],c:0,tip:"Pflanze nimmt ein Gas aus der Luft auf.",erkl:"Kohlenstoffdioxid + Wasser reagieren unter Einwirkung von Licht zu Traubenzucker + Sauerstoff."},
+{w:1,ab:1,q:"Was entsteht bei der Photosynthese (Produkte)?",a:["Traubenzucker und Sauerstoff","Kohlenstoffdioxid und Wasser","Kalkwasser und Stärke","Fett und Licht"],c:0,tip:"Eines davon atmen wir ein.",erkl:"Produkte sind Traubenzucker (Energiespeicher) und Sauerstoff. Es findet eine Energieumwandlung statt: Lichtenergie wird im Traubenzucker gespeichert."},
+{w:1,ab:1,q:"Welche Aufgaben hat die Wurzel?",a:["Verankerung und Aufnahme von Wasser und Mineralsalzen","Photosynthese","geschlechtliche Fortpflanzung","Verdunstung von Wasser"],c:0,tip:"Sie steckt im Boden.",erkl:"Die Wurzel verankert die Pflanze im Boden und nimmt Wasser und gelöste Mineralsalze auf."},
+{w:1,ab:1,q:"Was versteht man unter Bestäubung?",a:["Übertragung der Pollenkörner auf die Narbe des Fruchtblatts","Verschmelzung von Eizelle und Spermienzelle","Aufnahme von Wasser durch die Wurzel","Abgabe von Sauerstoff durch das Blatt"],c:0,tip:"Pollen reisen zur Narbe.",erkl:"Bestäubung = Übertragung der in den Staubblättern gebildeten Pollenkörner auf die Narbe des Fruchtblatts."},
+{w:1,ab:1,q:"Welches Pflanzenorgan ist für die geschlechtliche Fortpflanzung zuständig?",a:["Die Blüte","Die Wurzel","Das Blatt","Die Sprossachse"],c:0,tip:"Sie ist oft bunt und duftet.",erkl:"Die Blüte dient der geschlechtlichen Fortpflanzung der Pflanze."},
+{w:1,ab:2,q:"Eine Blüte ist unscheinbar und bildet sehr viele leichte Pollenkörner. Welche Bestäubung ist das?",a:["Windbestäubung","Tierbestäubung","Selbstbestäubung durch Wasser","gar keine Bestäubung"],c:0,tip:"Wer trägt leichte Pollen weit weg?",erkl:"Bei Windbestäubung verbreitet der Wind viele Pollenkörner – Treffsicherheit gering, daher hohe Anzahl. Tierbestäubte Blüten sind auffällig und locken mit Duft/Nektar."},
+{w:1,ab:2,q:"Wie hängen Photosynthese und Zellatmung zusammen?",a:["Sie sind umgekehrte Reaktionsschemata","Sie sind exakt dasselbe","Beide brauchen Licht","Beide verbrauchen Sauerstoff"],c:0,tip:"Vergleiche die Edukte und Produkte beider Prozesse.",erkl:"Photosynthese: CO₂ + Wasser → Traubenzucker + Sauerstoff. Zellatmung läuft genau umgekehrt. Pflanzen bauen Energie auf, alle Zellen setzen sie wieder frei."},
+{w:1,ab:2,q:"Welche Bedingungen braucht ein Bohnensamen, um zu keimen?",a:["Wasser, Wärme und Luft","nur Dunkelheit","nur Dünger","Salz und Kälte"],c:0,tip:"Im Samen ist fast kein Wasser – was muss dazukommen?",erkl:"Unter geeigneten Bedingungen (Wasser, Wärme, Luft) beginnt das Wachstum des Pflanzenembryos – die Keimung. Das Nährgewebe (Keimblätter) liefert Nährstoffe."},
+{w:1,ab:2,q:"Welche Aufgabe hat das Blatt?",a:["Photosynthese, Verdunstung und Gasaustausch","Verankerung im Boden","Transport von Stoffen in der ganzen Pflanze","Bildung der Samen"],c:0,tip:"Hier wird es grün und flach.",erkl:"Das Blatt betreibt Photosynthese, verdunstet Wasser und tauscht Sauerstoff und Kohlenstoffdioxid aus."},
+{w:1,ab:2,q:"Eine Pflanze transportiert Wasser von der Wurzel nach oben und richtet ihre Blätter zum Licht aus. Welches Organ leistet das?",a:["Die Sprossachse","Die Wurzel","Die Blüte","Das Keimblatt"],c:0,tip:"Es ist der 'Stamm', der alles verbindet.",erkl:"Die Sprossachse transportiert Stoffe in alle Teile der Pflanze und richtet die Blätter zum Licht aus."},
+{w:1,ab:3,q:"BOSS: Eine gesunde Topfpflanze steht wochenlang im dunklen Keller und geht ein. Warum?",a:["Ohne Licht keine Photosynthese – die Pflanze kann keinen Traubenzucker als Energie mehr herstellen","Im Keller ist zu viel Sauerstoff","Pflanzen brauchen ständig Tierbestäubung","Ohne Licht verdunstet zu viel Wasser"],c:0,tip:"Wofür braucht die Photosynthese Licht?",erkl:"Für die Photosynthese ist Licht nötig. Ohne Licht entsteht kein Traubenzucker – der Pflanze fehlt die gespeicherte Energie zum Leben."},
+
+/* ===== WELT 2: Tierreich ===== */
+{w:2,ab:1,q:"Welche Körperbedeckung ist typisch für Vögel?",a:["Federn","Haare","Hornschuppen","feuchte Haut"],c:0,tip:"Damit können sie auch fliegen.",erkl:"Vögel haben Federn, atmen über Lungen, sind thermoregulatorisch und legen hartschalige Eier."},
+{w:2,ab:1,q:"Wie atmen Fische?",a:["Über Kiemen","Über Lungen","Über die Haut","Über Federn"],c:0,tip:"Sie leben dauerhaft im Wasser.",erkl:"Fische atmen über Kiemen, haben Knochenschuppen mit Schleimschicht, sind thermokonform und betreiben äußere Befruchtung (Laich)."},
+{w:2,ab:1,q:"Welche Körperbedeckung haben Reptilien?",a:["Hornschuppen","Federn","Fell","Schleimhaut ohne Schuppen"],c:0,tip:"Sie schützen vor Austrocknung.",erkl:"Reptilien tragen Hornschuppen als Schutz vor Austrocknung, atmen über Lungen und legen weichschalige Eier an Land."},
+{w:2,ab:1,q:"Welches Merkmal ist typisch für Säugetiere?",a:["Milchdrüsen zum Säugen der Jungen","Eier mit harter Schale","Atmung über Kiemen","feuchte Schleimhaut"],c:0,tip:"Daher der Name 'Säuge'-tier.",erkl:"Säugetiere haben Haare/Fell, Milchdrüsen, atmen über Lungen, sind thermoregulatorisch und entwickeln den Embryo in der Gebärmutter."},
+{w:2,ab:1,q:"Wie ist die Haut von Amphibien typischerweise?",a:["Dünn, feucht und mit Schleimschicht","Trocken mit Hornschuppen","Mit Federn bedeckt","Mit Fell bedeckt"],c:0,tip:"Frosch und Co. mögen es feucht.",erkl:"Amphibien haben dünne, feuchte Haut mit Schleimschicht, leben in Wasser und an Land und legen Laich (äußere Befruchtung)."},
+{w:2,ab:1,q:"Welche Wirbeltierklassen sind thermoregulatorisch (gleichwarm)?",a:["Vögel und Säugetiere","Fische und Amphibien","Reptilien und Fische","Amphibien und Reptilien"],c:0,tip:"Welche Tiere halten ihre Körpertemperatur selbst konstant?",erkl:"Vögel und Säugetiere sind thermoregulatorisch (gleichwarm). Fische, Amphibien und Reptilien sind thermokonform (wechselwarm)."},
+{w:2,ab:2,q:"Ein Tier hat: Federn, Lungenatmung, innere Befruchtung und legt hartschalige Eier. Welche Klasse?",a:["Vögel","Reptilien","Säugetiere","Amphibien"],c:0,tip:"Federn sind das eindeutige Merkmal.",erkl:"Diese Kombination – besonders die Federn und hartschaligen Eier – ist typisch für Vögel."},
+{w:2,ab:2,q:"Was bedeutet 'thermokonform'?",a:["Die Körpertemperatur passt sich der Umgebung an (wechselwarm)","Das Tier hält immer dieselbe Temperatur","Das Tier hat immer Fieber","Das Tier kann nicht schwitzen"],c:0,tip:"konform = angepasst.",erkl:"Thermokonforme Tiere (Fische, Amphibien, Reptilien) passen ihre Körpertemperatur der Umgebung an – sie sind wechselwarm."},
+{w:2,ab:2,q:"Wie ändert sich die Atmung bei Amphibien im Laufe ihres Lebens?",a:["Jungtiere atmen über Kiemen, nach der Metamorphose über Lungen und Haut","Immer nur über Kiemen","Immer nur über Federn","Erst Lungen, dann Kiemen"],c:0,tip:"Denk an Kaulquappe → Frosch.",erkl:"Amphibien-Jungtiere atmen über Kiemen. Nach der Metamorphose atmen die erwachsenen Tiere über Lungen und Haut."},
+{w:2,ab:2,q:"Ein Tier hat feuchte Haut, legt Laich ins Wasser, bewegt sich auf vier Beinen und lebt in Wasser und Land. Welche Klasse?",a:["Amphibien","Reptilien","Fische","Säugetiere"],c:0,tip:"Laich + feuchte Haut + Wasser und Land.",erkl:"Feuchte Haut, äußere Befruchtung mit Laich und das Leben in Wasser und Land sind klassische Amphibien-Kennzeichen."},
+{w:2,ab:2,q:"Ein Tier hat Knochenschuppen mit Schleimschicht, atmet über Kiemen, ist wechselwarm und legt Laich. Welche Klasse?",a:["Fische","Amphibien","Reptilien","Vögel"],c:0,tip:"Kiemen + Knochenschuppen sind eindeutig.",erkl:"Knochenschuppen mit Schleimschicht, Kiemenatmung, thermokonform und äußere Befruchtung mit Laich kennzeichnen die Fische."},
+{w:2,ab:3,q:"BOSS: Warum können Reptilien dauerhaft in trockenen Wüsten leben, Amphibien aber nicht?",a:["Reptilien sind durch Hornschuppen vor Austrocknung geschützt; Amphibien brauchen feuchte Haut und Wasser zum Ablegen von Laich","Reptilien sind gleichwarm, Amphibien nicht","Amphibien haben keine Beine","Reptilien atmen über Kiemen"],c:0,tip:"Vergleiche Körperbedeckung und Fortpflanzung.",erkl:"Hornschuppen schützen Reptilien vor Austrocknung, ihre Eier sind beschalt. Amphibien brauchen feuchte Haut und Wasser für den Laich – in der Wüste unmöglich."},
+
+/* ===== WELT 3: Stoffe & Labor ===== */
+{w:3,ab:1,q:"Wie heißt die Temperatur, ab der ein Stoff vom flüssigen in den gasförmigen Zustand übergeht?",a:["Siedetemperatur","Schmelztemperatur","Gefriertemperatur","Raumtemperatur"],c:0,tip:"Denk an kochendes Wasser.",erkl:"Ab der Siedetemperatur geht ein Stoff vom flüssigen in den gasförmigen Zustand über."},
+{w:3,ab:1,q:"Was geschieht ab der Schmelztemperatur?",a:["Der Stoff geht von fest nach flüssig über","Der Stoff geht von flüssig nach gasförmig über","Der Stoff wird fest","Der Stoff verschwindet"],c:0,tip:"Denk an schmelzendes Eis.",erkl:"Ab der Schmelztemperatur geht ein Stoff vom festen in den flüssigen Zustand über."},
+{w:3,ab:1,q:"Welche Farbe zeigt Stärke beim Nachweis mit Lugol'scher Lösung?",a:["Blau-violett","Knallrot","Gelb","Grün"],c:0,tip:"Eine dunkle, bläuliche Färbung.",erkl:"Stärke färbt sich mit Lugol'scher Lösung blau-violett (Stärkenachweis)."},
+{w:3,ab:1,q:"Welches Gas weist die Kalkwasserprobe nach?",a:["Kohlenstoffdioxid","Sauerstoff","Stickstoff","Wasserstoff"],c:0,tip:"Das Kalkwasser trübt sich.",erkl:"Leitet man Kohlenstoffdioxid in Kalkwasser ein, trübt sich die Flüssigkeit."},
+{w:3,ab:1,q:"Welches Gas weist die Glimmspanprobe nach?",a:["Sauerstoff","Kohlenstoffdioxid","Wasserdampf","Stickstoff"],c:0,tip:"Der glimmende Span flammt auf.",erkl:"Sauerstoff lässt einen glimmenden Holzspan wieder aufflammen (Glimmspanprobe)."},
+{w:3,ab:1,q:"Mit welchem Gerät misst man das Volumen einer Flüssigkeit?",a:["Messzylinder","Waage","Thermometer","Lupe"],c:0,tip:"Das Wort enthält schon 'Mess'.",erkl:"Der Messzylinder misst Volumen, die Waage die Masse, das Thermometer die Temperatur."},
+{w:3,ab:2,q:"Ein Stück Butter macht Papier dauerhaft durchscheinend. Welcher Nachweis ist das und was zeigt er?",a:["Fettfleckprobe – sie weist Fett nach","Stärkenachweis – er weist Zucker nach","Glimmspanprobe – sie weist Sauerstoff nach","Kalkwasserprobe – sie weist CO₂ nach"],c:0,tip:"Fett hinterlässt bleibende Flecken.",erkl:"Fett hinterlässt auf Papier dauerhafte Flecken, die das Papier durchscheinend machen – die Fettfleckprobe."},
+{w:3,ab:2,q:"Was passiert beim Lösen eines Zuckerkristalls im Teilchenmodell?",a:["Die Zuckerteilchen verteilen sich zwischen den Wasserteilchen","Die Zuckerteilchen verschwinden vollständig","Die Wasserteilchen werden zu Zucker","Der Zucker wird zu Gas"],c:0,tip:"Die Teilchen sind noch da, nur verteilt.",erkl:"Beim Lösen verteilen sich die Zuckerteilchen gleichmäßig zwischen den Wasserteilchen – sie verschwinden nicht, man sieht sie nur nicht mehr."},
+{w:3,ab:2,q:"Wovon hängt der Aggregatzustand eines Stoffes ab?",a:["Von der Temperatur","Von der Farbe","Vom Gewicht der Probe","Vom Behälter"],c:0,tip:"Eis, Wasser, Wasserdampf – was ändert sich?",erkl:"Der Aggregatzustand (fest/flüssig/gasförmig) hängt von der Temperatur ab; Schmelz- und Siedetemperatur sind die Grenzen."},
+{w:3,ab:2,q:"Du sollst Zellen untersuchen, die mit bloßem Auge unsichtbar sind. Welches Gerät wählst du?",a:["Lichtmikroskop","Lupe","Becherglas","Messzylinder"],c:0,tip:"Die Lupe vergrößert nur schwach.",erkl:"Das Lichtmikroskop vergrößert stark genug, um Zellbestandteile zu erkennen. Eine Lupe oder ein Binokular vergrößern deutlich schwächer."},
+{w:3,ab:2,q:"Wasser fängt bei 100 °C an zu kochen und wird zu Wasserdampf. Was beschreibt diese Temperatur?",a:["Die Siedetemperatur (flüssig → gasförmig)","Die Schmelztemperatur (fest → flüssig)","Die Gefriertemperatur","Die Raumtemperatur"],c:0,tip:"Welcher Übergang passiert beim Kochen?",erkl:"Beim Kochen geht Wasser vom flüssigen in den gasförmigen Zustand über – das geschieht ab der Siedetemperatur."},
+{w:3,ab:3,q:"BOSS: Du willst beweisen, dass eine Wasserpflanze im Licht Sauerstoff produziert. Welchen Nachweis nutzt du an dem aufgefangenen Gas?",a:["Die Glimmspanprobe – flammt der Span auf, ist es Sauerstoff","Die Kalkwasserprobe","Die Stärkeprobe mit Lugol","Die Fettfleckprobe"],c:0,tip:"Welcher Nachweis passt zu Sauerstoff?",erkl:"Bei der Photosynthese entsteht Sauerstoff. Sauerstoff lässt einen glimmenden Span aufflammen – also die Glimmspanprobe."},
+
+/* ===== WELT 4: Forscher & Code ===== */
+{w:4,ab:1,q:"Womit beginnt eine naturwissenschaftliche Untersuchung?",a:["Mit einem Phänomen (einer Beobachtung)","Mit der Folgerung","Mit dem Aufräumen","Mit dem Ergebnis"],c:0,tip:"Am Anfang steht etwas, das man beobachtet.",erkl:"Ablauf: Phänomen → Hypothese → Planung → Durchführung → Beobachtung → Folgerung."},
+{w:4,ab:1,q:"In der Schreibweise rechteck1.füllfarbe = grün – was ist 'füllfarbe'?",a:["Ein Attribut","Eine Methode","Eine Klasse","Ein Objekt"],c:0,tip:"Es beschreibt eine Eigenschaft des Objekts.",erkl:"Eigenschaften von Objekten werden durch Attribute und deren Werte beschrieben: rechteck1.füllfarbe = grün."},
+{w:4,ab:1,q:"Was ist 'RECHTECK' (in Großbuchstaben)?",a:["Eine Klasse (Vorlage)","Ein einzelnes Objekt","Ein Attributwert","Eine Methode"],c:0,tip:"Nach dieser Vorlage werden gleichartige Objekte erzeugt.",erkl:"Eine Klasse ist die Vorlage für gleichartige Objekte mit denselben Attributen und Methoden, z. B. RECHTECK."},
+{w:4,ab:1,q:"Was zeigt eine Objektkarte?",a:["Die Attribute und aktuellen Attributwerte eines Objekts","Nur den Namen des Programmierers","Die Geschwindigkeit des Computers","Eine Landkarte"],c:0,tip:"Sie 'fotografiert' den Zustand eines Objekts.",erkl:"Eine Objektkarte stellt ein Objekt mit seinen Attributen und deren aktuellen Werten dar."},
+{w:4,ab:1,q:"Bei rechteck1.drehenUm(45°) – was ist 'drehenUm'?",a:["Eine Methode","Ein Attribut","Eine Klasse","Ein Wert"],c:0,tip:"Das Objekt führt damit etwas aus.",erkl:"Objekte können Methoden ausführen. drehenUm(45°) ist ein Methodenaufruf in Punktnotation; der Wert in Klammern ist der Drehwinkel."},
+{w:4,ab:1,q:"Welches Diagramm eignet sich am besten, um eine Messung über die Tageszeit darzustellen?",a:["Liniendiagramm","Säulendiagramm für einzelne Kategorien","Kreisdiagramm","Objektkarte"],c:0,tip:"Werte, die sich kontinuierlich verändern, verbindet man.",erkl:"Ein Liniendiagramm zeigt Verläufe über die Zeit gut. Säulendiagramme eignen sich für den Vergleich einzelner Werte/Kategorien."},
+{w:4,ab:2,q:"Bei einem Experiment: Was ist die 'unabhängige Variable'?",a:["Die Größe, die man gezielt verändert","Die Größe, die man misst","Eine Größe, die konstant bleibt","Ein zufälliger Messfehler"],c:0,tip:"Sie ist die Ursache, die du selbst einstellst.",erkl:"Die unabhängige Variable wird gezielt verändert. Ihre Wirkung auf die abhängige (gemessene) Variable wird untersucht."},
+{w:4,ab:2,q:"Was muss man mit allen weiteren Einflussgrößen tun, damit ein Experiment aussagekräftig ist?",a:["Sie in allen Ansätzen konstant halten","Sie ebenfalls ständig verändern","Sie weglassen und ignorieren","Sie zufällig auswählen"],c:0,tip:"Nur eine Größe darf sich ändern.",erkl:"Alle anderen Größen, die das Ergebnis beeinflussen könnten, müssen konstant gehalten werden – sonst weiß man nicht, was die Wirkung verursacht hat."},
+{w:4,ab:2,q:"„Ich kaufe lieber Eier aus Freilandhaltung, weil mir Tierwohl wichtiger ist.“ Was für eine Aussage ist das?",a:["Eine bewertende Aussage","Eine beschreibende Aussage","Eine Messung","Eine Hypothese"],c:0,tip:"Es kommt eine persönliche Meinung vor.",erkl:"Bewertende Aussagen beziehen sich auf Werte und geben eine persönliche Meinung wieder. Beschreibende Aussagen stellen einen überprüfbaren Sachverhalt dar."},
+{w:4,ab:2,q:"In rechteck1.füllfarbe = grün – was ist 'rechteck1'?",a:["Ein Objekt (nach der Vorlage einer Klasse erzeugt)","Eine Klasse","Eine Methode","Ein Diagramm"],c:0,tip:"Es wird nach einer Vorlage (Klasse) erzeugt.",erkl:"rechteck1 ist ein konkretes Objekt, erzeugt nach der Vorlage der Klasse RECHTECK. Es hat eigene Attributwerte."},
+{w:4,ab:3,q:"BOSS: Du untersuchst, ob mehr Dünger Tomaten höher wachsen lässt. Welche Planung ist korrekt?",a:["Düngermenge gezielt verändern (unabhängig), Pflanzenhöhe messen (abhängig), Licht/Wasser/Topf konstant halten","Alle Größen gleichzeitig verändern, damit es schneller geht","Nur eine einzige Pflanze beobachten und raten","Die Höhe verändern und den Dünger messen"],c:0,tip:"Was veränderst du, was misst du, was hältst du gleich?",erkl:"Unabhängige Variable = Düngermenge (gezielt verändert), abhängige Variable = Höhe (gemessen). Licht, Wasser und Topfgröße müssen konstant bleiben."},
+
+/* ===== FINALE: Welt-übergreifender Endboss (zählt zu Welt 4) ===== */
+{w:4,ab:3,q:"ENDBOSS: Ein Apfelbaum betreibt tagsüber im Licht Photosynthese. Welcher Prozess liefert seinen Zellen aber Tag UND Nacht Energie?",a:["Die Zellatmung – sie läuft in allen lebenden Zellen ständig ab","Die Photosynthese, auch nachts","Die Bestäubung","Die Verdunstung"],c:0,tip:"Photosynthese braucht Licht – Energiegewinnung der Zelle aber immer.",erkl:"Photosynthese funktioniert nur im Licht. Die Zellatmung (Traubenzucker + Sauerstoff → CO₂ + Wasser) läuft dagegen ständig in allen lebenden Zellen ab und liefert nutzbare Energie."}
+];
+
+const ACHIEVEMENTS = [
+  {id:"first",  ic:"🎓", name:"Erster Schritt", desc:"Erste Welt geschafft"},
+  {id:"combo5", ic:"🔥", name:"Combo-König", desc:"5er-Combo erreicht"},
+  {id:"perfect",ic:"💎", name:"Makellos", desc:"Eine Welt ohne Fehler"},
+  {id:"boss",   ic:"🐲", name:"Bossbezwinger", desc:"5 Bosse besiegt"},
+  {id:"rich",   ic:"🪙", name:"Münzsammler", desc:"100 Münzen besessen"},
+  {id:"all3",   ic:"🌟", name:"Drei-Sterne", desc:"3 Sterne in einer Welt"},
+  {id:"master", ic:"👑", name:"NaTu-Meister", desc:"Alle 5 Welten geschafft"},
+  {id:"transfer",ic:"🧠",name:"Transfer-Profi", desc:"Alle Transfer-Bosse (AB3) geschafft"}
+];
+
+/* ====================== STATE ====================== */
+const DEF = {coins:0, xp:0, level:1, high:0, stars:{}, done:{}, ach:[], bossKills:0, transferKills:0, player:"", board:[]};
+let S = load();
+let G = null; // aktuelles Spiel
+
+function load(){ try{return Object.assign({},DEF,JSON.parse(localStorage.getItem("natuquest")||"{}"));}catch(e){return Object.assign({},DEF);} }
+function save(){ localStorage.setItem("natuquest", JSON.stringify(S)); }
+function resetAll(){ if(confirm("Eigenen Fortschritt (Level, Münzen, freigeschaltete Welten) löschen?\n\nDer Klassen-Highscore bleibt erhalten.")){ const keep=S.board; S=Object.assign({},DEF,{stars:{},done:{},ach:[],board:keep}); save(); document.getElementById('playerName').value=""; renderMap(); show('start'); } }
+
+/* ====================== NAV ====================== */
+const screens=["start","map","game","summary","ach","board"];
+function show(id){ screens.forEach(s=>document.getElementById(s).classList.toggle("hidden",s!==id)); window.scrollTo(0,0); }
+function goMap(){ renderMap(); show('map'); }
+function startGame(){
+  const v=document.getElementById('playerName').value.trim();
+  if(!v){ alert("Bitte gib zuerst deinen Namen ein."); document.getElementById('playerName').focus(); return; }
+  S.player=v.slice(0,20); save(); goMap();
+}
+
+/* ====================== MAP ====================== */
+function totalStars(){ return Object.values(S.stars).reduce((a,b)=>a+b,0); }
+function renderMap(){
+  document.getElementById("mPlayer").textContent=S.player||"–";
+  document.getElementById("mTotalStars").textContent=totalStars();
+  document.getElementById("mLevel").textContent=S.level;
+  document.getElementById("mCoins").textContent=S.coins;
+  document.getElementById("mHigh").textContent=S.high;
+  const grid=document.getElementById("worldGrid"); grid.innerHTML="";
+  WORLDS.forEach((w,i)=>{
+    const unlocked = i===0 || S.done[i-1];
+    const st = S.stars[i]||0;
+    const el=document.createElement("div");
+    el.className="world "+w.cls+(unlocked?"":" locked");
+    el.innerHTML=`<div style="font-size:30px">${w.emoji} ${unlocked?"":"🔒"}</div>
+      <div style="font-size:18px">Welt ${i+1}: ${w.name}</div>
+      <small>${w.desc}</small>
+      <div class="stars">${"★".repeat(st)}${"☆".repeat(3-st)}</div>`;
+    if(unlocked) el.onclick=()=>startWorld(i);
+    grid.appendChild(el);
+  });
+}
+
+/* ====================== GAME ====================== */
+function startWorld(w){
+  if(!S.player){ show('start'); document.getElementById('playerName').focus(); return; }
+  const qs = Q.filter(q=>q.w===w).map(q=>shuffleOpts(q));
+  shuffle(qs);
+  G={w, qs, i:0, lives:3, score:0, mult:1, streak:0, right:0, coins:0,
+     used:{}, answered:false};
+  show('game'); renderHUD(); renderQ();
+}
+function replayWorld(){ startWorld(G.w); }
+
+function shuffleOpts(q){
+  // Antwortreihenfolge mischen, korrekten Index nachführen
+  const idx=q.a.map((_,k)=>k); shuffle(idx);
+  const a=idx.map(k=>q.a[k]); const c=idx.indexOf(q.c);
+  return {ab:q.ab, q:q.q, a, c, tip:q.tip, erkl:q.erkl, boss:q.q.startsWith("BOSS")||q.q.startsWith("ENDBOSS")};
+}
+function shuffle(arr){ for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];} }
+
+function renderHUD(){
+  document.getElementById("hWorld").textContent=`${WORLDS[G.w].emoji} ${WORLDS[G.w].name}`;
+  document.getElementById("hHearts").textContent="❤️".repeat(G.lives)+"🤍".repeat(3-G.lives);
+  document.getElementById("hCoins").textContent=S.coins;
+  document.getElementById("hMult").textContent=G.mult;
+  document.getElementById("hScore").textContent=G.score;
+  document.getElementById("hBar").style.width=(G.i/G.qs.length*100)+"%";
+}
+function renderQ(){
+  G.answered=false; G.used={};
+  const q=G.qs[G.i];
+  document.getElementById("qIdx").textContent=G.i+1;
+  document.getElementById("qTot").textContent=G.qs.length;
+  const abEl=document.getElementById("qAb");
+  abEl.className="abtag ab"+q.ab;
+  abEl.textContent = q.boss ? "🐲 BOSS · AB3" : ("AB"+q.ab+" · "+["","Reproduktion","Reorganisation","Transfer"][q.ab]);
+  document.getElementById("qText").textContent=q.q.replace(/^(END)?BOSS: /,"");
+  const ans=document.getElementById("qAns"); ans.innerHTML="";
+  q.a.forEach((opt,k)=>{
+    const b=document.createElement("button");
+    b.className="opt"; b.textContent=opt; b.onclick=()=>answer(k);
+    ans.appendChild(b);
+  });
+  document.getElementById("qFb").classList.add("hidden");
+  document.getElementById("nextRow").classList.add("hidden");
+  renderPowers();
+  renderHUD();
+}
+function renderPowers(){
+  const defs=[
+    {id:"5050", name:"50:50", cost:15, ic:"✂️"},
+    {id:"tip",  name:"Tipp", cost:10, ic:"💡"},
+    {id:"life", name:"+1 Leben", cost:25, ic:"❤️"}
+  ];
+  const box=document.getElementById("powers"); box.innerHTML="";
+  defs.forEach(p=>{
+    const used=G.used[p.id];
+    const can=S.coins>=p.cost && !used && !G.answered && !(p.id==="life"&&G.lives>=3);
+    const el=document.createElement("div");
+    el.className="pw"+(can?"":" disabled");
+    el.innerHTML=`${p.ic} ${p.name}<span class="cost">${used?"genutzt":p.cost+" 🪙"}</span>`;
+    if(can) el.onclick=()=>usePower(p);
+    box.appendChild(el);
+  });
+}
+function usePower(p){
+  S.coins-=p.cost; G.used[p.id]=true; save();
+  const q=G.qs[G.i];
+  if(p.id==="5050"){
+    const wrong=q.a.map((_,k)=>k).filter(k=>k!==q.c); shuffle(wrong);
+    wrong.slice(0,2).forEach(k=>document.querySelectorAll(".opt")[k].classList.add("dim","disabled"));
+  } else if(p.id==="tip"){
+    fb(`💡 <b>Tipp:</b> ${q.tip}`, false);
+    document.getElementById("qFb").classList.remove("hidden");
+  } else if(p.id==="life"){
+    G.lives=Math.min(3,G.lives+1);
+  }
+  renderHUD(); renderPowers();
+}
+function fb(html){ const f=document.getElementById("qFb"); f.innerHTML=html; f.classList.remove("hidden"); }
+
+function answer(k){
+  if(G.answered) return;
+  G.answered=true;
+  const q=G.qs[G.i];
+  const opts=document.querySelectorAll(".opt");
+  opts.forEach(o=>o.classList.add("disabled"));
+  if(k===q.c){
+    opts[k].classList.add("correct");
+    G.streak++; G.right++;
+    if(G.streak>=2) G.mult=Math.min(5,G.streak);
+    const pts=(q.boss?30:q.ab*10)*G.mult;
+    G.score+=pts;
+    const earned=(q.boss?8:3);
+    G.coins+=earned; S.coins+=earned;
+    beep(true);
+    if(G.streak>=2) showCombo("🔥 "+G.streak+"er Combo! x"+G.mult);
+    if(G.streak>=5) unlock("combo5");
+    if(q.boss){ S.bossKills++; S.transferKills++; unlock("boss?check"); }
+    fb(`✅ <b>Richtig!</b> +${pts} Punkte · +${earned} 🪙<br>${q.erkl}`);
+  } else {
+    opts[k].classList.add("wrong");
+    opts[q.c].classList.add("correct");
+    G.streak=0; G.mult=1; G.lives--;
+    beep(false);
+    fb(`❌ <b>Leider falsch.</b><br>${q.erkl}`);
+  }
+  if(S.coins>=100) unlock("rich");
+  save(); renderHUD(); renderPowers();
+  const nb=document.getElementById("nextBtn");
+  if(G.lives<=0){ nb.textContent="💀 Welt neu starten"; }
+  else nb.textContent = (G.i>=G.qs.length-1)?"🏁 Auswertung":"Weiter ›";
+  document.getElementById("nextRow").classList.remove("hidden");
+}
+function nextQ(){
+  if(G.lives<=0){ startWorld(G.w); return; }
+  G.i++;
+  if(G.i>=G.qs.length){ finishWorld(); return; }
+  renderQ();
+}
+function quitWorld(){ if(confirm("Welt verlassen? Fortschritt in dieser Welt geht verloren.")) goMap(); }
+
+function finishWorld(){
+  // Sterne nach Trefferquote
+  const total=G.qs.length, r=G.right;
+  let st=1; if(r>=total-1) st=3; else if(r>=Math.ceil(total*0.7)) st=2;
+  if((S.stars[G.w]||0)<st) S.stars[G.w]=st;
+  S.done[G.w]=true;
+  S.xp+=G.score;
+  S.level=1+Math.floor(S.xp/300);
+  if(G.score>S.high) S.high=G.score;
+  // Achievements
+  unlock("first");
+  if(r===total) unlock("perfect");
+  if(st===3) unlock("all3");
+  if(S.bossKills>=5) unlock("boss");
+  if([0,1,2,3,4].every(w=>S.done[w])) unlock("master");
+  if(S.transferKills>=6) unlock("transfer");
+  // Klassen-Highscore-Eintrag
+  S.board.push({name:S.player||"Anonym", w:G.w, score:G.score, stars:st, ts:Date.now()});
+  if(S.board.length>500) S.board=S.board.slice(-500);
+  save();
+  const ranks=aggregate();
+  const myRank=ranks.findIndex(r=>r.name===(S.player||"Anonym"))+1;
+  document.getElementById("sumRank").textContent = myRank>0 ? (myRank+" / "+ranks.length) : "–";
+  // Summary
+  document.getElementById("sumTitle").textContent = (r===total)?"🌟 Perfekt gemeistert!":"Welt geschafft!";
+  document.getElementById("sumStars").textContent = "★".repeat(st)+"☆".repeat(3-st);
+  document.getElementById("sumScore").textContent=G.score;
+  document.getElementById("sumRight").textContent=`${r}/${total}`;
+  document.getElementById("sumCoins").textContent=G.coins;
+  const msgs=["Weiter so – nächste Welt wartet!","Stark! Schaffst du beim nächsten Mal mehr Sterne?","Dein Wissen wächst mit jeder Runde."];
+  document.getElementById("sumText").textContent = r===total?"Keine einzige falsche Antwort – makellos!":msgs[st-1];
+  show('summary');
+  if(st>=2) confetti();
+}
+
+/* ====================== ACHIEVEMENTS ====================== */
+function unlock(id){ if(id==="boss?check")return; if(!S.ach.includes(id)){ S.ach.push(id); save(); toast(id);} }
+function showAch(){
+  const grid=document.getElementById("badgeGrid"); grid.innerHTML="";
+  ACHIEVEMENTS.forEach(a=>{
+    const have=S.ach.includes(a.id);
+    const el=document.createElement("div");
+    el.className="badge"+(have?"":" off");
+    el.innerHTML=`<span class="ic">${have?a.ic:"🔒"}</span>${a.name}<div style="font-weight:500;color:var(--muted);font-size:12px;margin-top:4px">${a.desc}</div>`;
+    grid.appendChild(el);
+  });
+  show('ach');
+}
+function toast(id){
+  const a=ACHIEVEMENTS.find(x=>x.id===id); if(!a)return;
+  showCombo(a.ic+" "+a.name+" freigeschaltet!");
+}
+
+/* ====================== KLASSEN-HIGHSCORE ====================== */
+function aggregate(){
+  const m={};
+  S.board.forEach(e=>{
+    const k=e.name;
+    if(!m[k]) m[k]={name:e.name, stars:{}, score:{}};
+    if((m[k].stars[e.w]||0)<e.stars) m[k].stars[e.w]=e.stars;
+    if((m[k].score[e.w]||0)<e.score) m[k].score[e.w]=e.score;
+  });
+  return Object.values(m).map(p=>({
+    name:p.name,
+    totStars:Object.values(p.stars).reduce((a,b)=>a+b,0),
+    totScore:Object.values(p.score).reduce((a,b)=>a+b,0),
+    worlds:Object.keys(p.score).length
+  })).sort((a,b)=> b.totStars-a.totStars || b.totScore-a.totScore || a.name.localeCompare(b.name));
+}
+function renderBoard(){
+  const rows=aggregate();
+  const tbl=document.getElementById("lbTable");
+  document.getElementById("lbEmpty").classList.toggle("hidden", rows.length>0);
+  const medal=["🥇","🥈","🥉"];
+  tbl.innerHTML = rows.length ?
+    '<tr><th>#</th><th>Name</th><th class="num">⭐</th><th class="num">Welten</th><th class="num">Punkte</th></tr>'+
+    rows.map((r,i)=>`<tr class="${r.name===S.player?'me':''}"><td class="rank">${medal[i]||(i+1)}</td><td>${esc(r.name)}</td><td class="num">${r.totStars}/15</td><td class="num">${r.worlds}/5</td><td class="num">${r.totScore}</td></tr>`).join('')
+    : '';
+  show('board');
+}
+function clearBoard(){ if(confirm("Den gesamten Klassen-Highscore wirklich löschen?")){ S.board=[]; save(); renderBoard(); } }
+function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ====================== EFFEKTE ====================== */
+function showCombo(txt){
+  const c=document.getElementById("combo");
+  c.textContent=txt; c.classList.remove("show"); void c.offsetWidth; c.classList.add("show");
+  clearTimeout(c._t); c._t=setTimeout(()=>c.classList.remove("show"),1400);
+}
+let actx;
+function beep(ok){
+  try{
+    actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+    if(ok){ tone(523,0,.08); tone(784,.09,.12); }
+    else { tone(200,0,.18,'square'); }
+  }catch(e){}
+}
+function tone(f,delay,dur,type){
+  const o=actx.createOscillator(), g=actx.createGain();
+  o.type=type||'sine'; o.frequency.value=f;
+  o.connect(g); g.connect(actx.destination);
+  const t=actx.currentTime+delay;
+  g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.25,t+.02);
+  g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.start(t); o.stop(t+dur+.02);
+}
+function confetti(){
+  const cv=document.getElementById("cf"), ctx=cv.getContext("2d");
+  cv.width=innerWidth; cv.height=innerHeight;
+  const cols=["#5ad1ff","#ffd34d","#37d67a","#ff7a8a","#c58bff"];
+  let parts=Array.from({length:140},()=>({x:Math.random()*cv.width,y:-20-Math.random()*cv.height,
+    s:4+Math.random()*7,vx:-2+Math.random()*4,vy:2+Math.random()*4,c:cols[Math.floor(Math.random()*cols.length)],r:Math.random()*6}));
+  let f=0;
+  (function loop(){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    parts.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.r+=.2;
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.r); ctx.fillStyle=p.c;
+      ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s*1.6); ctx.restore(); });
+    f++; if(f<120) requestAnimationFrame(loop); else ctx.clearRect(0,0,cv.width,cv.height);
+  })();
+}
+
+/* init */
+if(S.player) document.getElementById("playerName").value=S.player;
+renderMap();
+</script>
+</body>
+</html>
