@@ -22,6 +22,7 @@
   .btn{cursor:pointer;border:none;border-radius:14px;padding:14px 18px;font-size:16px;
     font-weight:700;color:#08122a;background:var(--accent);transition:.12s transform,.12s filter;}
   .btn:hover{filter:brightness(1.08)} .btn:active{transform:translateY(2px)}
+  .btn:disabled{opacity:.4;cursor:default;transform:none;filter:none}
   .btn.alt{background:var(--accent2)}
   .btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line)}
   .card{background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--line);
@@ -86,6 +87,37 @@
   table.lb td.num,table.lb th.num{text-align:right;font-variant-numeric:tabular-nums}
   .rank{font-weight:900;font-size:17px}
   tr.me td{background:#243066}
+  /* interactive task formats */
+  .opdesc{color:var(--muted);font-size:13.5px;margin:-6px 0 12px;line-height:1.4}
+  .chip{display:inline-flex;align-items:center;background:var(--card);border:2px solid var(--line);color:var(--ink);
+    border-radius:999px;padding:9px 14px;font-size:15px;cursor:pointer;transition:.1s;user-select:none}
+  .chip:hover{border-color:var(--accent)} .chip.sel{border-color:var(--accent2);background:#2c3470}
+  .chip.correct{border-color:var(--good);background:#143a26}.chip.wrong{border-color:var(--bad);background:#3a1620}
+  .chip.used{opacity:.3;pointer-events:none}
+  .pool{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 12px;min-height:40px;padding:6px;border-radius:12px;background:#11142f}
+  .zones{display:grid;gap:10px} .zones.two{grid-template-columns:1fr 1fr} .zones.three{grid-template-columns:1fr 1fr 1fr}
+  @media(max-width:560px){.zones.three{grid-template-columns:1fr}.zones.two{grid-template-columns:1fr}}
+  .zone{border:2px dashed var(--line);border-radius:14px;padding:10px;min-height:84px}
+  .zone h4{margin:0 0 8px;font-size:14px;color:var(--accent);text-align:center}
+  .zone.mid h4{color:var(--accent2)}
+  .zone .drop{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+  .seqbox{display:flex;flex-wrap:wrap;gap:6px;align-items:center;border:2px dashed var(--line);
+    border-radius:14px;padding:10px;min-height:50px;margin-bottom:6px}
+  .seqbox .ph{color:var(--muted);font-size:14px}
+  .seqitem{display:inline-flex;align-items:center;background:#2c3470;border:1px solid var(--line);
+    border-radius:10px;padding:8px 12px;font-size:14px;cursor:pointer}
+  .seqitem b{color:var(--accent2);margin-right:7px}
+  .seqitem.correct{border-color:var(--good)}.seqitem.wrong{border-color:var(--bad)}
+  .slots{display:grid;gap:8px;margin:10px 0}
+  .slot{display:flex;align-items:center;gap:10px;border:2px solid var(--line);border-radius:12px;padding:11px 13px;cursor:pointer}
+  .slot.sel{border-color:var(--accent2)} .slot .num{font-weight:900;color:var(--accent2);min-width:22px}
+  .slot .val{color:var(--muted);flex:1} .slot .val.filled{color:var(--ink);font-weight:700}
+  .slot.correct{border-color:var(--good)}.slot.wrong{border-color:var(--bad)}
+  .diagram{display:flex;justify-content:center;margin:4px 0 10px}
+  .diagram svg{max-width:100%;height:auto;background:#11142f;border-radius:14px;border:1px solid var(--line)}
+  .epart{margin:12px 0;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:#11142f}
+  .epart .pq{font-weight:700;margin-bottom:9px}
+  .claim{background:#11142f;border-left:4px solid var(--accent2);border-radius:8px;padding:10px 13px;margin-bottom:6px;font-size:15.5px}
 </style>
 </head>
 <body>
@@ -103,6 +135,7 @@
     <div class="card" style="margin-top:18px">
       <p>Reise durch <b>5 Themenwelten</b>, sammle <b>XP, Münzen und Sterne</b>, baue <b>Combo-Ketten</b> auf und besiege die <b>Bosse</b> (Transfer-Fragen). Je weniger Fehler, desto mehr Sterne! 🌟</p>
       <ul style="color:var(--muted);line-height:1.7;margin:8px 0">
+        <li>🧩 Abwechslungsreiche Aufgaben: Auswählen, Beschriften, Ordnen, Zuordnen, Erklären und Vergleichen</li>
         <li>❤️ 3 Leben pro Welt – bei 0 musst du die Welt neu starten</li>
         <li>🔥 Combo-Multiplikator: mehrere richtige Antworten in Folge bringen mehr Punkte</li>
         <li>🪙 Mit Münzen kaufst du Power-ups: 50:50, Tipp, Extra-Leben</li>
@@ -157,7 +190,11 @@
         <span class="abtag" id="qAb">AB1</span>
       </div>
       <div class="qtext" id="qText">…</div>
+      <div class="opdesc hidden" id="qOp"></div>
       <div class="ans" id="qAns"></div>
+      <div class="row hidden" id="checkRow">
+        <button class="btn alt" id="checkBtn" onclick="checkTask()">✓ Prüfen</button>
+      </div>
       <div class="feedback hidden" id="qFb"></div>
       <div class="powers" id="powers"></div>
       <div class="row hidden" id="nextRow">
@@ -223,79 +260,139 @@ const WORLDS = [
   {name:"Forscher & Code", emoji:"🔬", cls:"w4", desc:"NaWi-Arbeiten, Diagramme, Informatik"}
 ];
 
-// q: Frage, a: Antworten, c: Index der richtigen Antwort, tip: Tipp (Power-up), erkl: Erklärung
+/* Aufgaben-Modell. Felder:
+   w: Welt | ab: Anforderungsbereich (1/2/3) | type: Format | op: Operator-Label | tip | erkl | boss?
+   mc:      a:[…], c:Index der richtigen Antwort
+   order:   items:[…] in KORREKTER Reihenfolge (wird gemischt dargestellt)
+   sort:    cats:[…], items:[{t,cat}]  (Karten in Gruppen einsortieren)
+   compare: left,right, items:[{t,cat}] cat 0=nur links,1=beides,2=nur rechts
+   label:   svg, slots:[{n,term}] (Begriffe ins Schaubild einsetzen)
+   explain: claim, parts:[{q,a:[…],c}] (Erklärung mit Begründung + Beispiel) */
 const Q = [
-/* ===== WELT 0: Körper & Zelle ===== */
-{w:0,ab:1,q:"Wo genau findet in der Lunge der Gasaustausch statt?",a:["In den Lungenbläschen","In der Luftröhre","In der Speiseröhre","Im Kehlkopf"],c:0,tip:"Es sind viele winzige Bläschen mit großer Oberfläche.",erkl:"In den Lungenbläschen wandern Sauerstoff- und Kohlenstoffdioxid-Teilchen durch die Zellmembranen ins bzw. aus dem Blut."},
-{w:0,ab:1,q:"Welche zwei Teilchensorten werden beim Gasaustausch ausgetauscht?",a:["Sauerstoff und Kohlenstoffdioxid","Stickstoff und Wasser","Traubenzucker und Fett","Kalk und Stärke"],c:0,tip:"Eines brauchst du zum Atmen, das andere atmest du aus.",erkl:"Sauerstoff geht ins Blut, Kohlenstoffdioxid wird abgegeben – beide wandern durch die Zellmembranen."},
-{w:0,ab:1,q:"Aus welchen zwei Kreisläufen besteht der doppelte Blutkreislauf?",a:["Lungenkreislauf und Körperkreislauf","Herzkreislauf und Hirnkreislauf","Arterienkreislauf und Venenkreislauf","Magenkreislauf und Darmkreislauf"],c:0,tip:"Einer führt zur Lunge, der andere zum restlichen Körper.",erkl:"Lungen- und Körperkreislauf sind über das Herz miteinander verbunden."},
-{w:0,ab:1,q:"Welcher Bestandteil kommt NUR in pflanzlichen Zellen vor, nicht in tierischen?",a:["Chloroplast","Zellkern","Zellmembran","Zellplasma"],c:0,tip:"Er enthält den grünen Farbstoff.",erkl:"Chloroplasten (sowie Zellwand und große Vakuole) sind typisch pflanzlich. Zellkern, Zellmembran und Zellplasma haben beide Zelltypen."},
-{w:0,ab:1,q:"Was reagiert bei der Zellatmung miteinander?",a:["Traubenzucker und Sauerstoff","Kohlenstoffdioxid und Wasser","Stärke und Kalk","Fett und Licht"],c:0,tip:"Die Edukte der Zellatmung – das Gegenteil der Photosynthese.",erkl:"Traubenzucker + Sauerstoff → Kohlenstoffdioxid + Wasser. Dabei wird nutzbare Energie frei."},
-{w:0,ab:1,q:"Welche Aufgabe hat das Herz?",a:["Es pumpt das Blut durch den gesamten Blutkreislauf","Es filtert die Luft","Es speichert Nährstoffe","Es bildet rote Blutkörperchen"],c:0,tip:"Es ist eine Pumpe.",erkl:"Das Herz pumpt das Blut, damit alle Körperzellen mit Nährstoffen und Sauerstoff versorgt werden."},
-{w:0,ab:2,q:"Bringe die Reiz-Reaktions-Kette in die richtige Reihenfolge:",a:["Reiz → Sinnesorgan → Nerven → Gehirn → Reaktion","Reiz → Gehirn → Nerven → Sinnesorgan → Reaktion","Sinnesorgan → Reiz → Reaktion → Gehirn → Nerven","Reaktion → Nerven → Reiz → Gehirn → Sinnesorgan"],c:0,tip:"Erst wird der Reiz aufgenommen, ganz am Ende erfolgt die Reaktion.",erkl:"Im Sinnesorgan wird der Reiz in elektrische Signale umgewandelt, über Nerven zum Gehirn geleitet, verarbeitet – daraus folgt die Reaktion."},
-{w:0,ab:2,q:"Warum braucht ein Muskel immer einen Gegenspieler-Muskel?",a:["Weil er sich nur zusammenziehen, aber nicht selbst wieder strecken kann","Weil zwei Muskeln stärker sind","Weil er sonst zu schnell ermüdet","Weil er sonst keinen Sauerstoff bekommt"],c:0,tip:"Denk an Beuger und Strecker am Arm.",erkl:"Ein Muskel kann sich nur anspannen. Um wieder in die Länge gezogen zu werden, braucht er einen Gegenspieler – das Gegenspielerprinzip."},
-{w:0,ab:2,q:"Warum haben Lungenbläschen und Darmzotten so viele feine Ausstülpungen?",a:["Um eine große Oberfläche für den Austausch zu schaffen","Um leichter zu sein","Um Platz zu sparen","Um Wärme zu speichern"],c:0,tip:"Mehr Fläche = mehr Austausch.",erkl:"Eine große Oberfläche erleichtert den Gasaustausch (Lunge) bzw. die Aufnahme von Nährstoff-Teilchen ins Blut (Darm)."},
-{w:0,ab:2,q:"In welchem Abschnitt werden die meisten Nährstoff-Teilchen ins Blut aufgenommen?",a:["Im Dünndarm","Im Mund","In der Speiseröhre","Im Magen"],c:0,tip:"Hier sitzen die Darmzotten.",erkl:"Bei der Verdauung wird die Nahrung zerlegt; die kleinen Teilchen werden hauptsächlich im Dünndarm ins Blut aufgenommen."},
-{w:0,ab:2,q:"Zu welchem Skelett-Bereich gehört die Wirbelsäule?",a:["Rumpfskelett","Kopfskelett","Armskelett","Beinskelett"],c:0,tip:"Der Rumpf ist der Körperstamm.",erkl:"Zum Rumpfskelett gehören Wirbelsäule, Brustkorb, Schulterblätter, Schlüsselbeine und Becken."},
-{w:0,ab:3,q:"BOSS: Beim schnellen Laufen atmest du schneller und das Herz schlägt schneller. Warum?",a:["Die Muskelzellen brauchen mehr Sauerstoff für die Zellatmung, um Energie zu gewinnen","Der Körper will sich abkühlen","Das Blut wird dadurch dicker","Die Lunge wird dadurch größer"],c:0,tip:"Verbinde Bewegung, Energie und Zellatmung.",erkl:"Bewegung kostet Energie. Diese liefert die Zellatmung (Traubenzucker + Sauerstoff). Mehr Energie = mehr Sauerstoffbedarf → schnelleres Atmen und Pumpen."},
+/* ============ WELT 0: Körper & Zelle ============ */
+{w:0,ab:1,type:"label",op:"Benennen",q:"Beschrifte das Skelett.",tip:"Kopf oben, Rumpf in der Mitte, dann Arme und Beine.",erkl:"Das Skelett gliedert sich in Kopfskelett (Schädel), Rumpfskelett (u. a. Wirbelsäule, Brustkorb), Armskelett und Beinskelett.",
+  svg:"<svg viewBox='0 0 260 280' xmlns='http://www.w3.org/2000/svg'><g fill='none' stroke='#a6acdb' stroke-width='3' stroke-linecap='round'><circle cx='130' cy='38' r='22'/><line x1='130' y1='60' x2='130' y2='150'/><line x1='105' y1='80' x2='155' y2='80'/><line x1='130' y1='80' x2='90' y2='130'/><line x1='130' y1='80' x2='170' y2='130'/><line x1='130' y1='150' x2='105' y2='240'/><line x1='130' y1='150' x2='155' y2='240'/></g><g font-family='Segoe UI,Arial' font-size='15' font-weight='700'><circle cx='185' cy='38' r='13' fill='#ffd34d'/><text x='185' y='43' text-anchor='middle' fill='#08122a'>1</text><circle cx='95' cy='110' r='13' fill='#ffd34d'/><text x='95' y='115' text-anchor='middle' fill='#08122a'>2</text><circle cx='185' cy='125' r='13' fill='#ffd34d'/><text x='185' y='130' text-anchor='middle' fill='#08122a'>3</text><circle cx='95' cy='235' r='13' fill='#ffd34d'/><text x='95' y='240' text-anchor='middle' fill='#08122a'>4</text></g></svg>",
+  slots:[{n:1,term:"Kopfskelett"},{n:2,term:"Rumpfskelett"},{n:3,term:"Armskelett"},{n:4,term:"Beinskelett"}]},
+{w:0,ab:1,type:"order",op:"Ordnen",q:"Ordne die Reiz-Reaktions-Kette in der richtigen Reihenfolge.",items:["Reiz","Sinnesorgan","Nerven","Gehirn","Reaktion"],tip:"Erst wird der Reiz aufgenommen, ganz am Ende erfolgt die Reaktion.",erkl:"Im Sinnesorgan wird der Reiz in elektrische Signale umgewandelt, über Nerven zum Gehirn geleitet, dort verarbeitet – daraus folgt die Reaktion."},
+{w:0,ab:1,type:"order",op:"Ordnen",q:"Ordne den Weg der Nahrung durch den Körper.",items:["Mund","Speiseröhre","Magen","Dünndarm","Aufnahme ins Blut"],tip:"Wo beginnt die Verdauung, wo werden die Teilchen aufgenommen?",erkl:"Die Nahrung wird vom Mund über Speiseröhre und Magen zerlegt; im Dünndarm werden die kleinen Teilchen ins Blut aufgenommen."},
+{w:0,ab:1,type:"sort",op:"Zuordnen",q:"Ordne die Knochen dem richtigen Skelettbereich zu.",cats:["Armskelett","Beinskelett"],items:[{t:"Elle",cat:0},{t:"Speiche",cat:0},{t:"Oberarmknochen",cat:0},{t:"Schienbein",cat:1},{t:"Wadenbein",cat:1},{t:"Oberschenkelknochen",cat:1}],tip:"Elle und Speiche sitzen im Unterarm.",erkl:"Armskelett: Oberarmknochen, Elle, Speiche, Handknochen. Beinskelett: Oberschenkelknochen, Schienbein, Wadenbein, Fußknochen."},
+{w:0,ab:1,type:"mc",op:"Auswählen",q:"Wähle aus: Welcher Bestandteil kommt NUR in pflanzlichen Zellen vor?",a:["Chloroplast","Zellkern","Zellmembran","Zellplasma"],c:0,tip:"Er enthält den grünen Farbstoff.",erkl:"Chloroplasten (sowie Zellwand und große Vakuole) sind typisch pflanzlich. Zellkern, Zellmembran und Zellplasma haben beide Zelltypen."},
+{w:0,ab:1,type:"mc",op:"Auswählen",q:"Wähle aus: Was reagiert bei der Zellatmung miteinander?",a:["Traubenzucker und Sauerstoff","Kohlenstoffdioxid und Wasser","Stärke und Kalk","Fett und Licht"],c:0,tip:"Das Gegenteil der Photosynthese.",erkl:"Traubenzucker + Sauerstoff → Kohlenstoffdioxid + Wasser. Dabei wird nutzbare Energie frei."},
+{w:0,ab:2,type:"explain",op:"Erklären",q:"Erkläre das Gegenspielerprinzip der Muskeln.",claim:"Ein Muskel allein kann ein Gelenk nicht hin- und zurückbewegen.",parts:[
+  {q:"Begründung – warum ist das so?",a:["Weil ein Muskel sich nur zusammenziehen, aber nicht selbst wieder strecken kann","Weil ein Muskel zu schwach ist","Weil ein Muskel keinen Sauerstoff bekommt"],c:0},
+  {q:"Wähle das passende Beispiel:",a:["Beuger und Strecker am Oberarm (Bizeps/Trizeps)","Herz und Lunge","Magen und Darm"],c:0}],
+  tip:"Anspannen geht, selbst strecken nicht.",erkl:"Ein Muskel kann sich nur anspannen. Zum Zurückbewegen braucht er einen Gegenspieler – z. B. Beuger und Strecker am Arm."},
+{w:0,ab:2,type:"explain",op:"Erläutern",q:"Erläutere, warum eine große Oberfläche für den Körper nützlich ist.",claim:"Viele biologische Strukturen besitzen feine Ein- und Ausstülpungen.",parts:[
+  {q:"Begründung – wozu dienen sie?",a:["Sie vergrößern die Oberfläche und erleichtern so den Austausch von Stoffen","Sie machen das Organ schwerer","Sie speichern Wärme"],c:0},
+  {q:"Wähle ein passendes Beispiel:",a:["Lungenbläschen vergrößern die Fläche für den Gasaustausch","Knochen vergrößern die Fläche zum Laufen","Haare vergrößern die Fläche zum Sehen"],c:0}],
+  tip:"Mehr Fläche = mehr Austausch.",erkl:"Eine große Oberfläche erleichtert den Austausch: Lungenbläschen den Gasaustausch, Darmzotten die Nährstoffaufnahme."},
+{w:0,ab:2,type:"explain",op:"Erklären",q:"Erkläre, warum du bei Anstrengung schneller atmest.",claim:"Beim Treppensteigen atmest du tiefer und schneller.",parts:[
+  {q:"Begründung – warum?",a:["Die Muskelzellen brauchen mehr Sauerstoff für die Zellatmung, um Energie zu gewinnen","Die Lunge wird dauerhaft größer","Das Blut wird dünner"],c:0},
+  {q:"Was wird dabei in den Zellen umgesetzt?",a:["Traubenzucker und Sauerstoff","Stärke und Kalk","Wasser und Licht"],c:0}],
+  tip:"Bewegung kostet Energie aus der Zellatmung.",erkl:"Bewegung verbraucht Energie. Die liefert die Zellatmung (Traubenzucker + Sauerstoff). Mehr Bedarf → schnelleres Atmen."},
+{w:0,ab:2,type:"explain",op:"Erklären",q:"Erkläre, wozu der Blutkreislauf dient.",claim:"Das Herz pumpt unermüdlich Blut durch den ganzen Körper.",parts:[
+  {q:"Begründung – warum ist das nötig?",a:["Damit alle Körperzellen mit Nährstoffen und Sauerstoff versorgt werden","Damit der Körper warm aussieht","Damit man schneller wächst"],c:0},
+  {q:"Welche zwei Kreisläufe gehören dazu?",a:["Lungen- und Körperkreislauf","Magen- und Darmkreislauf","Arm- und Beinkreislauf"],c:0}],
+  tip:"Versorgung der Zellen.",erkl:"Der doppelte Blutkreislauf (Lungen- + Körperkreislauf) versorgt über das Herz alle Zellen mit Nährstoffen und Sauerstoff."},
+{w:0,ab:2,type:"mc",op:"Erklären",q:"Erkläre: Wo werden die meisten Nährstoff-Teilchen ins Blut aufgenommen – und warum dort?",a:["Im Dünndarm, weil dort die Darmzotten die Oberfläche stark vergrößern","Im Magen, weil dort die Magensäure ist","Im Mund, weil dort gekaut wird","In der Speiseröhre, weil sie lang ist"],c:0,tip:"Wo sitzen die Darmzotten?",erkl:"Im Dünndarm vergrößern Darmzotten die Oberfläche – dadurch werden dort die meisten Nährstoff-Teilchen ins Blut aufgenommen."},
+{w:0,ab:3,type:"compare",op:"Vergleichen",q:"Vergleiche die pflanzliche und die tierische Zelle: Was hat nur die eine, was haben beide?",left:"Nur Pflanzenzelle",right:"Nur Tierzelle",items:[{t:"Zellwand",cat:0},{t:"Chloroplasten",cat:0},{t:"große Vakuole",cat:0},{t:"Zellkern",cat:1},{t:"Zellmembran",cat:1},{t:"Zellplasma",cat:1}],
+  midLabel:"Beides",boss:true,tip:"Was braucht eine Pflanze zusätzlich (Halt, Photosynthese)?",erkl:"Nur Pflanzenzellen haben Zellwand, Chloroplasten und eine große Vakuole. Zellkern, Zellmembran und Zellplasma besitzen beide Zelltypen."},
 
-/* ===== WELT 1: Pflanzenreich ===== */
-{w:1,ab:1,q:"Welcher Farbstoff ist für die Photosynthese unbedingt nötig?",a:["Chlorophyll","Hämoglobin","Lugol","Melanin"],c:0,tip:"Er macht Pflanzen grün.",erkl:"Chlorophyll in den Zellen grüner Pflanzen ist für die Photosynthese notwendig."},
-{w:1,ab:1,q:"Was reagiert bei der Photosynthese miteinander (Edukte)?",a:["Kohlenstoffdioxid und Wasser (mit Licht)","Traubenzucker und Sauerstoff","Stärke und Kalk","Fett und Wärme"],c:0,tip:"Pflanze nimmt ein Gas aus der Luft auf.",erkl:"Kohlenstoffdioxid + Wasser reagieren unter Einwirkung von Licht zu Traubenzucker + Sauerstoff."},
-{w:1,ab:1,q:"Was entsteht bei der Photosynthese (Produkte)?",a:["Traubenzucker und Sauerstoff","Kohlenstoffdioxid und Wasser","Kalkwasser und Stärke","Fett und Licht"],c:0,tip:"Eines davon atmen wir ein.",erkl:"Produkte sind Traubenzucker (Energiespeicher) und Sauerstoff. Es findet eine Energieumwandlung statt: Lichtenergie wird im Traubenzucker gespeichert."},
-{w:1,ab:1,q:"Welche Aufgaben hat die Wurzel?",a:["Verankerung und Aufnahme von Wasser und Mineralsalzen","Photosynthese","geschlechtliche Fortpflanzung","Verdunstung von Wasser"],c:0,tip:"Sie steckt im Boden.",erkl:"Die Wurzel verankert die Pflanze im Boden und nimmt Wasser und gelöste Mineralsalze auf."},
-{w:1,ab:1,q:"Was versteht man unter Bestäubung?",a:["Übertragung der Pollenkörner auf die Narbe des Fruchtblatts","Verschmelzung von Eizelle und Spermienzelle","Aufnahme von Wasser durch die Wurzel","Abgabe von Sauerstoff durch das Blatt"],c:0,tip:"Pollen reisen zur Narbe.",erkl:"Bestäubung = Übertragung der in den Staubblättern gebildeten Pollenkörner auf die Narbe des Fruchtblatts."},
-{w:1,ab:1,q:"Welches Pflanzenorgan ist für die geschlechtliche Fortpflanzung zuständig?",a:["Die Blüte","Die Wurzel","Das Blatt","Die Sprossachse"],c:0,tip:"Sie ist oft bunt und duftet.",erkl:"Die Blüte dient der geschlechtlichen Fortpflanzung der Pflanze."},
-{w:1,ab:2,q:"Eine Blüte ist unscheinbar und bildet sehr viele leichte Pollenkörner. Welche Bestäubung ist das?",a:["Windbestäubung","Tierbestäubung","Selbstbestäubung durch Wasser","gar keine Bestäubung"],c:0,tip:"Wer trägt leichte Pollen weit weg?",erkl:"Bei Windbestäubung verbreitet der Wind viele Pollenkörner – Treffsicherheit gering, daher hohe Anzahl. Tierbestäubte Blüten sind auffällig und locken mit Duft/Nektar."},
-{w:1,ab:2,q:"Wie hängen Photosynthese und Zellatmung zusammen?",a:["Sie sind umgekehrte Reaktionsschemata","Sie sind exakt dasselbe","Beide brauchen Licht","Beide verbrauchen Sauerstoff"],c:0,tip:"Vergleiche die Edukte und Produkte beider Prozesse.",erkl:"Photosynthese: CO₂ + Wasser → Traubenzucker + Sauerstoff. Zellatmung läuft genau umgekehrt. Pflanzen bauen Energie auf, alle Zellen setzen sie wieder frei."},
-{w:1,ab:2,q:"Welche Bedingungen braucht ein Bohnensamen, um zu keimen?",a:["Wasser, Wärme und Luft","nur Dunkelheit","nur Dünger","Salz und Kälte"],c:0,tip:"Im Samen ist fast kein Wasser – was muss dazukommen?",erkl:"Unter geeigneten Bedingungen (Wasser, Wärme, Luft) beginnt das Wachstum des Pflanzenembryos – die Keimung. Das Nährgewebe (Keimblätter) liefert Nährstoffe."},
-{w:1,ab:2,q:"Welche Aufgabe hat das Blatt?",a:["Photosynthese, Verdunstung und Gasaustausch","Verankerung im Boden","Transport von Stoffen in der ganzen Pflanze","Bildung der Samen"],c:0,tip:"Hier wird es grün und flach.",erkl:"Das Blatt betreibt Photosynthese, verdunstet Wasser und tauscht Sauerstoff und Kohlenstoffdioxid aus."},
-{w:1,ab:2,q:"Eine Pflanze transportiert Wasser von der Wurzel nach oben und richtet ihre Blätter zum Licht aus. Welches Organ leistet das?",a:["Die Sprossachse","Die Wurzel","Die Blüte","Das Keimblatt"],c:0,tip:"Es ist der 'Stamm', der alles verbindet.",erkl:"Die Sprossachse transportiert Stoffe in alle Teile der Pflanze und richtet die Blätter zum Licht aus."},
-{w:1,ab:3,q:"BOSS: Eine gesunde Topfpflanze steht wochenlang im dunklen Keller und geht ein. Warum?",a:["Ohne Licht keine Photosynthese – die Pflanze kann keinen Traubenzucker als Energie mehr herstellen","Im Keller ist zu viel Sauerstoff","Pflanzen brauchen ständig Tierbestäubung","Ohne Licht verdunstet zu viel Wasser"],c:0,tip:"Wofür braucht die Photosynthese Licht?",erkl:"Für die Photosynthese ist Licht nötig. Ohne Licht entsteht kein Traubenzucker – der Pflanze fehlt die gespeicherte Energie zum Leben."},
+/* ============ WELT 1: Pflanzenreich ============ */
+{w:1,ab:1,type:"label",op:"Benennen",q:"Beschrifte die Organe der Pflanze.",tip:"Von oben nach unten: Fortpflanzung, Photosynthese, Transport, Verankerung.",erkl:"Blüte (Fortpflanzung), Blatt (Photosynthese), Sprossachse (Transport), Wurzel (Verankerung/Wasseraufnahme).",
+  svg:"<svg viewBox='0 0 260 280' xmlns='http://www.w3.org/2000/svg'><g fill='none' stroke='#5fd97a' stroke-width='3' stroke-linecap='round'><circle cx='130' cy='40' r='16' fill='#ffb6c1' stroke='#ff7a8a'/><line x1='130' y1='56' x2='130' y2='210'/><path d='M130 110 q-45 -12 -60 -40'/><path d='M130 150 q45 -12 60 -40'/><path d='M130 210 q-20 30 -45 40 M130 210 q20 30 45 40 M130 210 v45'/></g><g font-family='Segoe UI,Arial' font-size='15' font-weight='700'><circle cx='168' cy='40' r='13' fill='#ffd34d'/><text x='168' y='45' text-anchor='middle' fill='#08122a'>1</text><circle cx='52' cy='66' r='13' fill='#ffd34d'/><text x='52' y='71' text-anchor='middle' fill='#08122a'>2</text><circle cx='160' cy='150' r='13' fill='#ffd34d'/><text x='160' y='155' text-anchor='middle' fill='#08122a'>3</text><circle cx='130' cy='265' r='13' fill='#ffd34d'/><text x='130' y='270' text-anchor='middle' fill='#08122a'>4</text></g></svg>",
+  slots:[{n:1,term:"Blüte"},{n:2,term:"Blatt"},{n:3,term:"Sprossachse"},{n:4,term:"Wurzel"}]},
+{w:1,ab:1,type:"sort",op:"Zuordnen",q:"Ordne jede Aufgabe dem richtigen Pflanzenorgan zu.",cats:["Blatt","Wurzel"],items:[{t:"Photosynthese",cat:0},{t:"Verdunstung von Wasser",cat:0},{t:"Gasaustausch",cat:0},{t:"Verankerung im Boden",cat:1},{t:"Aufnahme von Wasser",cat:1},{t:"Aufnahme von Mineralsalzen",cat:1}],tip:"Was passiert oben im Licht, was unten im Boden?",erkl:"Blatt: Photosynthese, Verdunstung, Gasaustausch. Wurzel: Verankerung sowie Aufnahme von Wasser und Mineralsalzen."},
+{w:1,ab:1,type:"order",op:"Ordnen",q:"Ordne die Schritte der Keimung eines Bohnensamens.",items:["Samen in feuchter Erde","Samen nimmt Wasser auf","Samenschale platzt","Pflanzenembryo beginnt zu wachsen","Keimling durchbricht die Erde"],tip:"Zuerst muss Wasser in den trockenen Samen.",erkl:"Der trockene Samen nimmt Wasser auf, die Schale platzt, der Embryo wächst (Keimung) und der Keimling kommt ans Licht."},
+{w:1,ab:1,type:"mc",op:"Auswählen",q:"Wähle aus: Welcher Farbstoff ist für die Photosynthese nötig?",a:["Chlorophyll","Hämoglobin","Lugol","Melanin"],c:0,tip:"Er macht Pflanzen grün.",erkl:"Chlorophyll in den Zellen grüner Pflanzen ist für die Photosynthese notwendig."},
+{w:1,ab:1,type:"mc",op:"Auswählen",q:"Wähle aus: Was versteht man unter Bestäubung?",a:["Übertragung der Pollenkörner auf die Narbe des Fruchtblatts","Verschmelzung von Eizelle und Spermienzelle","Aufnahme von Wasser durch die Wurzel","Abgabe von Sauerstoff durch das Blatt"],c:0,tip:"Pollen reisen zur Narbe.",erkl:"Bestäubung = Übertragung der in den Staubblättern gebildeten Pollenkörner auf die Narbe des Fruchtblatts."},
+{w:1,ab:1,type:"sort",op:"Zuordnen",q:"Ordne die Stoffe richtig zu: Was geht in die Photosynthese hinein, was kommt heraus?",cats:["Edukte (hinein)","Produkte (heraus)"],items:[{t:"Kohlenstoffdioxid",cat:0},{t:"Wasser",cat:0},{t:"Traubenzucker",cat:1},{t:"Sauerstoff",cat:1}],tip:"Licht liefert die Energie; die Pflanze baut Zucker auf.",erkl:"Photosynthese: Kohlenstoffdioxid + Wasser → (mit Licht) → Traubenzucker + Sauerstoff."},
+{w:1,ab:2,type:"explain",op:"Erklären",q:"Erkläre, warum windbestäubte Blüten so viele Pollen bilden.",claim:"Gräser bilden riesige Mengen feiner, leichter Pollenkörner.",parts:[
+  {q:"Begründung – warum so viele?",a:["Weil der Wind die Pollen ungezielt verteilt – die Treffsicherheit ist gering","Weil Pollen schwer sind","Weil Tiere sie sonst fressen"],c:0},
+  {q:"Womit locken dagegen tierbestäubte Blüten?",a:["Mit auffälligen Blüten, Duft und Nektar","Mit sehr vielen leichten Pollen","Mit Dornen"],c:0}],
+  tip:"Wind zielt nicht – Tiere schon eher.",erkl:"Windbestäubte Blüten bilden viele Pollen, weil der Wind ungezielt verteilt. Tierbestäubte Blüten locken stattdessen mit Duft, Farbe und Nektar."},
+{w:1,ab:2,type:"explain",op:"Erläutern",q:"Erläutere die Aufgabe der Wurzel.",claim:"Eine Pflanze steht fest im Boden und bekommt doch Wasser.",parts:[
+  {q:"Welche zwei Aufgaben hat die Wurzel?",a:["Verankerung der Pflanze und Aufnahme von Wasser und Mineralsalzen","Photosynthese und Fortpflanzung","Transport und Verdunstung"],c:0},
+  {q:"Beispiel – was passiert beim Gießen?",a:["Die Wurzel nimmt das Wasser mit gelösten Mineralsalzen auf","Die Wurzel betreibt Photosynthese","Die Wurzel bildet Pollen"],c:0}],
+  tip:"Sie steckt im Boden.",erkl:"Die Wurzel verankert die Pflanze und nimmt Wasser samt gelöster Mineralsalze auf – z. B. beim Gießen."},
+{w:1,ab:2,type:"mc",op:"Erklären",q:"Erkläre: Warum braucht eine Pflanze das Blatt unbedingt?",a:["Weil im Blatt die Photosynthese stattfindet, die Traubenzucker als Energiequelle liefert","Weil das Blatt die Pflanze im Boden verankert","Weil das Blatt die Pollen bildet","Weil das Blatt Wasser pumpt"],c:0,tip:"Wo wird es grün und flach?",erkl:"Im Blatt findet die Photosynthese statt – sie liefert den Traubenzucker, aus dem die Pflanze Energie gewinnt."},
+{w:1,ab:2,type:"mc",op:"Erklären",q:"Erkläre, was bei der Keimung passiert und welche Bedingungen nötig sind.",a:["Der Embryo beginnt zu wachsen, sobald Wasser, Wärme und Luft vorhanden sind","Der Samen wächst nur in völliger Dunkelheit ohne Wasser","Der Samen braucht nur Dünger","Der Samen keimt nur bei Kälte"],c:0,tip:"Im trockenen Samen ist fast kein Wasser.",erkl:"Unter geeigneten Bedingungen (Wasser, Wärme, Luft) beginnt der Pflanzenembryo zu wachsen – das ist die Keimung. Das Nährgewebe versorgt ihn anfangs."},
+{w:1,ab:2,type:"explain",op:"Erklären",q:"Erkläre, warum eine Pflanze im Dunkeln eingeht.",claim:"Eine gesunde Topfpflanze steht wochenlang im dunklen Keller und stirbt.",parts:[
+  {q:"Begründung – warum?",a:["Ohne Licht keine Photosynthese – die Pflanze stellt keinen Traubenzucker als Energie mehr her","Im Keller gibt es zu viel Sauerstoff","Pflanzen brauchen ständig Tierbestäubung"],c:0},
+  {q:"Was würde der Pflanze helfen?",a:["Sie ans Licht (z. B. ans Fenster) stellen","Sie tiefer in den Keller stellen","Ihr die Blätter entfernen"],c:0}],
+  tip:"Wofür braucht die Photosynthese Licht?",erkl:"Für die Photosynthese ist Licht nötig. Ohne Licht entsteht kein Traubenzucker – der Pflanze fehlt die Energie. Am Licht erholt sie sich."},
+{w:1,ab:3,type:"compare",op:"Vergleichen",q:"Vergleiche Photosynthese und Zellatmung.",left:"Nur Photosynthese",right:"Nur Zellatmung",items:[{t:"braucht Licht",cat:0},{t:"baut Traubenzucker auf",cat:0},{t:"setzt Energie aus Traubenzucker frei",cat:2},{t:"läuft auch im Dunkeln ab",cat:2},{t:"hat mit Sauerstoff zu tun",cat:1},{t:"hat mit Traubenzucker zu tun",cat:1}],
+  midLabel:"Beides",boss:true,tip:"Beide nutzen Sauerstoff und Traubenzucker – aber in umgekehrter Richtung.",erkl:"Photosynthese braucht Licht und baut Traubenzucker auf; Zellatmung setzt die Energie wieder frei (auch nachts). Beide arbeiten mit Sauerstoff und Traubenzucker – als umgekehrte Reaktionen."},
 
-/* ===== WELT 2: Tierreich ===== */
-{w:2,ab:1,q:"Welche Körperbedeckung ist typisch für Vögel?",a:["Federn","Haare","Hornschuppen","feuchte Haut"],c:0,tip:"Damit können sie auch fliegen.",erkl:"Vögel haben Federn, atmen über Lungen, sind thermoregulatorisch und legen hartschalige Eier."},
-{w:2,ab:1,q:"Wie atmen Fische?",a:["Über Kiemen","Über Lungen","Über die Haut","Über Federn"],c:0,tip:"Sie leben dauerhaft im Wasser.",erkl:"Fische atmen über Kiemen, haben Knochenschuppen mit Schleimschicht, sind thermokonform und betreiben äußere Befruchtung (Laich)."},
-{w:2,ab:1,q:"Welche Körperbedeckung haben Reptilien?",a:["Hornschuppen","Federn","Fell","Schleimhaut ohne Schuppen"],c:0,tip:"Sie schützen vor Austrocknung.",erkl:"Reptilien tragen Hornschuppen als Schutz vor Austrocknung, atmen über Lungen und legen weichschalige Eier an Land."},
-{w:2,ab:1,q:"Welches Merkmal ist typisch für Säugetiere?",a:["Milchdrüsen zum Säugen der Jungen","Eier mit harter Schale","Atmung über Kiemen","feuchte Schleimhaut"],c:0,tip:"Daher der Name 'Säuge'-tier.",erkl:"Säugetiere haben Haare/Fell, Milchdrüsen, atmen über Lungen, sind thermoregulatorisch und entwickeln den Embryo in der Gebärmutter."},
-{w:2,ab:1,q:"Wie ist die Haut von Amphibien typischerweise?",a:["Dünn, feucht und mit Schleimschicht","Trocken mit Hornschuppen","Mit Federn bedeckt","Mit Fell bedeckt"],c:0,tip:"Frosch und Co. mögen es feucht.",erkl:"Amphibien haben dünne, feuchte Haut mit Schleimschicht, leben in Wasser und an Land und legen Laich (äußere Befruchtung)."},
-{w:2,ab:1,q:"Welche Wirbeltierklassen sind thermoregulatorisch (gleichwarm)?",a:["Vögel und Säugetiere","Fische und Amphibien","Reptilien und Fische","Amphibien und Reptilien"],c:0,tip:"Welche Tiere halten ihre Körpertemperatur selbst konstant?",erkl:"Vögel und Säugetiere sind thermoregulatorisch (gleichwarm). Fische, Amphibien und Reptilien sind thermokonform (wechselwarm)."},
-{w:2,ab:2,q:"Ein Tier hat: Federn, Lungenatmung, innere Befruchtung und legt hartschalige Eier. Welche Klasse?",a:["Vögel","Reptilien","Säugetiere","Amphibien"],c:0,tip:"Federn sind das eindeutige Merkmal.",erkl:"Diese Kombination – besonders die Federn und hartschaligen Eier – ist typisch für Vögel."},
-{w:2,ab:2,q:"Was bedeutet 'thermokonform'?",a:["Die Körpertemperatur passt sich der Umgebung an (wechselwarm)","Das Tier hält immer dieselbe Temperatur","Das Tier hat immer Fieber","Das Tier kann nicht schwitzen"],c:0,tip:"konform = angepasst.",erkl:"Thermokonforme Tiere (Fische, Amphibien, Reptilien) passen ihre Körpertemperatur der Umgebung an – sie sind wechselwarm."},
-{w:2,ab:2,q:"Wie ändert sich die Atmung bei Amphibien im Laufe ihres Lebens?",a:["Jungtiere atmen über Kiemen, nach der Metamorphose über Lungen und Haut","Immer nur über Kiemen","Immer nur über Federn","Erst Lungen, dann Kiemen"],c:0,tip:"Denk an Kaulquappe → Frosch.",erkl:"Amphibien-Jungtiere atmen über Kiemen. Nach der Metamorphose atmen die erwachsenen Tiere über Lungen und Haut."},
-{w:2,ab:2,q:"Ein Tier hat feuchte Haut, legt Laich ins Wasser, bewegt sich auf vier Beinen und lebt in Wasser und Land. Welche Klasse?",a:["Amphibien","Reptilien","Fische","Säugetiere"],c:0,tip:"Laich + feuchte Haut + Wasser und Land.",erkl:"Feuchte Haut, äußere Befruchtung mit Laich und das Leben in Wasser und Land sind klassische Amphibien-Kennzeichen."},
-{w:2,ab:2,q:"Ein Tier hat Knochenschuppen mit Schleimschicht, atmet über Kiemen, ist wechselwarm und legt Laich. Welche Klasse?",a:["Fische","Amphibien","Reptilien","Vögel"],c:0,tip:"Kiemen + Knochenschuppen sind eindeutig.",erkl:"Knochenschuppen mit Schleimschicht, Kiemenatmung, thermokonform und äußere Befruchtung mit Laich kennzeichnen die Fische."},
-{w:2,ab:3,q:"BOSS: Warum können Reptilien dauerhaft in trockenen Wüsten leben, Amphibien aber nicht?",a:["Reptilien sind durch Hornschuppen vor Austrocknung geschützt; Amphibien brauchen feuchte Haut und Wasser zum Ablegen von Laich","Reptilien sind gleichwarm, Amphibien nicht","Amphibien haben keine Beine","Reptilien atmen über Kiemen"],c:0,tip:"Vergleiche Körperbedeckung und Fortpflanzung.",erkl:"Hornschuppen schützen Reptilien vor Austrocknung, ihre Eier sind beschalt. Amphibien brauchen feuchte Haut und Wasser für den Laich – in der Wüste unmöglich."},
+/* ============ WELT 2: Tierreich ============ */
+{w:2,ab:1,type:"sort",op:"Zuordnen",q:"Ordne die Merkmale der richtigen Wirbeltierklasse zu.",cats:["Fische","Vögel"],items:[{t:"Kiemenatmung",cat:0},{t:"Knochenschuppen",cat:0},{t:"Laich im Wasser",cat:0},{t:"Federn",cat:1},{t:"Lungenatmung",cat:1},{t:"hartschalige Eier",cat:1}],tip:"Wer lebt im Wasser, wer kann fliegen?",erkl:"Fische: Kiemen, Knochenschuppen, Laich. Vögel: Federn, Lungen, hartschalige Eier."},
+{w:2,ab:1,type:"sort",op:"Zuordnen",q:"Ordne jede Körperbedeckung der richtigen Klasse zu.",cats:["Vögel","Säugetiere","Reptilien"],items:[{t:"Federn",cat:0},{t:"Haare / Fell",cat:1},{t:"Hornschuppen",cat:2}],tip:"Drei Klassen, drei typische Hüllen.",erkl:"Vögel haben Federn, Säugetiere Haare/Fell, Reptilien Hornschuppen."},
+{w:2,ab:1,type:"order",op:"Ordnen",q:"Ordne die Entwicklung eines Frosches (Amphibie).",items:["Laich im Wasser","Kaulquappe mit Kiemen","Beine wachsen","Metamorphose","Frosch mit Lunge"],tip:"Erst Wasser-Larve, dann Umbau zum Landtier.",erkl:"Aus dem Laich schlüpft die Kaulquappe (Kiemen); nach der Metamorphose wird daraus der Frosch, der über Lungen und Haut atmet."},
+{w:2,ab:1,type:"mc",op:"Auswählen",q:"Wähle aus: Wie atmen Fische?",a:["Über Kiemen","Über Lungen","Über die Haut","Über Federn"],c:0,tip:"Sie leben dauerhaft im Wasser.",erkl:"Fische atmen über Kiemen und nehmen so den im Wasser gelösten Sauerstoff auf."},
+{w:2,ab:1,type:"mc",op:"Auswählen",q:"Wähle aus: Welche Wirbeltierklassen sind thermoregulatorisch (gleichwarm)?",a:["Vögel und Säugetiere","Fische und Amphibien","Reptilien und Fische","Amphibien und Reptilien"],c:0,tip:"Wer hält die Körpertemperatur selbst konstant?",erkl:"Vögel und Säugetiere sind thermoregulatorisch (gleichwarm). Fische, Amphibien und Reptilien sind thermokonform (wechselwarm)."},
+{w:2,ab:1,type:"sort",op:"Nennen",q:"Welche Merkmale treffen auf Säugetiere zu? Ordne jede Karte richtig zu.",cats:["Trifft auf Säugetiere zu","Trifft NICHT zu"],items:[{t:"Haare / Fell",cat:0},{t:"Milchdrüsen",cat:0},{t:"Lungenatmung",cat:0},{t:"Kiemenatmung",cat:1},{t:"Federn",cat:1},{t:"legt Laich",cat:1}],tip:"Wie wird der Nachwuchs ernährt?",erkl:"Säugetiere: Haare/Fell, Milchdrüsen, Lungenatmung, gleichwarm, Entwicklung im Mutterleib. Kiemen, Federn und Laich gehören zu anderen Klassen."},
+{w:2,ab:2,type:"explain",op:"Erklären",q:"Erkläre, warum Amphibien eine feuchte Haut brauchen.",claim:"Ein Frosch hält sich am liebsten an feuchten Orten auf.",parts:[
+  {q:"Begründung – warum feucht?",a:["Weil er auch über die feuchte Haut atmet und sonst austrocknen würde","Weil er sonst nicht springen kann","Weil feuchte Haut wärmer ist"],c:0},
+  {q:"Beispiel – wo lebt er deshalb?",a:["In der Nähe von Gewässern und an schattigen, feuchten Plätzen","In trockenem Wüstensand","Hoch oben in der Luft"],c:0}],
+  tip:"Die Haut hilft beim Atmen.",erkl:"Amphibien atmen auch über die dünne, feuchte Haut. Trocknet sie aus, funktioniert das nicht – darum leben sie an feuchten Orten."},
+{w:2,ab:2,type:"explain",op:"Erläutern",q:"Erläutere den Begriff 'thermoregulatorisch'.",claim:"Ein Spatz bleibt auch im kalten Winter aktiv.",parts:[
+  {q:"Was bedeutet thermoregulatorisch?",a:["Das Tier hält seine Körpertemperatur selbst konstant (gleichwarm)","Das Tier passt seine Temperatur der Umgebung an","Das Tier hat immer Fieber"],c:0},
+  {q:"Welche Klassen sind so?",a:["Vögel und Säugetiere","Fische und Reptilien","Amphibien und Fische"],c:0}],
+  tip:"regulieren = selbst steuern.",erkl:"Thermoregulatorische (gleichwarme) Tiere – Vögel und Säugetiere – halten ihre Körpertemperatur selbst konstant, auch bei Kälte."},
+{w:2,ab:2,type:"mc",op:"Erklären",q:"Erkläre, warum eine Kaulquappe Kiemen, ein erwachsener Frosch aber Lungen hat.",a:["Die Kaulquappe lebt im Wasser (Kiemen); nach der Metamorphose lebt der Frosch an Land und atmet über Lunge und Haut","Frösche atmen immer über Kiemen","Kaulquappen haben schon Lungen","Der Frosch atmet über Federn"],c:0,tip:"Lebensraum-Wechsel von Wasser zu Land.",erkl:"Im Wasser nutzt die Kaulquappe Kiemen. Bei der Metamorphose wird sie zum Landtier und atmet über Lungen und Haut."},
+{w:2,ab:2,type:"mc",op:"Erklären",q:"Erkläre, warum Reptilien Hornschuppen besitzen.",a:["Die Hornschuppen schützen vor Austrocknung und ermöglichen so das Leben an Land","Hornschuppen helfen beim Schwimmen","Hornschuppen dienen der Photosynthese","Hornschuppen halten die Eier feucht"],c:0,tip:"Was droht an Land ohne Schutz?",erkl:"Hornschuppen schützen Reptilien vor dem Austrocknen – dadurch können sie auch in trockenen Lebensräumen an Land leben."},
+{w:2,ab:3,type:"compare",op:"Vergleichen",q:"Vergleiche Amphibien und Reptilien.",left:"Nur Amphibien",right:"Nur Reptilien",items:[{t:"feuchte Haut mit Schleim",cat:0},{t:"Laich im Wasser",cat:0},{t:"Hornschuppen",cat:2},{t:"weichschalige Eier an Land",cat:2},{t:"Wirbeltiere",cat:1},{t:"thermokonform (wechselwarm)",cat:1}],
+  midLabel:"Beides",boss:true,tip:"Beide sind wechselwarme Wirbeltiere – die Haut und die Eier unterscheiden sie.",erkl:"Amphibien: feuchte Haut, Laich im Wasser. Reptilien: Hornschuppen, Eier an Land. Beide sind wechselwarme Wirbeltiere."},
+{w:2,ab:3,type:"compare",op:"Vergleichen",q:"Vergleiche Fische und Säugetiere.",left:"Nur Fische",right:"Nur Säugetiere",items:[{t:"Kiemenatmung",cat:0},{t:"Knochenschuppen",cat:0},{t:"Milchdrüsen",cat:2},{t:"Haare / Fell",cat:2},{t:"Wirbeltiere",cat:1},{t:"haben ein Skelett",cat:1}],
+  midLabel:"Beides",boss:true,tip:"Wie atmen sie, wie versorgen sie den Nachwuchs?",erkl:"Fische: Kiemen, Knochenschuppen, wechselwarm. Säugetiere: Lungen, Fell, Milchdrüsen, gleichwarm. Beide sind Wirbeltiere mit Skelett."},
 
-/* ===== WELT 3: Stoffe & Labor ===== */
-{w:3,ab:1,q:"Wie heißt die Temperatur, ab der ein Stoff vom flüssigen in den gasförmigen Zustand übergeht?",a:["Siedetemperatur","Schmelztemperatur","Gefriertemperatur","Raumtemperatur"],c:0,tip:"Denk an kochendes Wasser.",erkl:"Ab der Siedetemperatur geht ein Stoff vom flüssigen in den gasförmigen Zustand über."},
-{w:3,ab:1,q:"Was geschieht ab der Schmelztemperatur?",a:["Der Stoff geht von fest nach flüssig über","Der Stoff geht von flüssig nach gasförmig über","Der Stoff wird fest","Der Stoff verschwindet"],c:0,tip:"Denk an schmelzendes Eis.",erkl:"Ab der Schmelztemperatur geht ein Stoff vom festen in den flüssigen Zustand über."},
-{w:3,ab:1,q:"Welche Farbe zeigt Stärke beim Nachweis mit Lugol'scher Lösung?",a:["Blau-violett","Knallrot","Gelb","Grün"],c:0,tip:"Eine dunkle, bläuliche Färbung.",erkl:"Stärke färbt sich mit Lugol'scher Lösung blau-violett (Stärkenachweis)."},
-{w:3,ab:1,q:"Welches Gas weist die Kalkwasserprobe nach?",a:["Kohlenstoffdioxid","Sauerstoff","Stickstoff","Wasserstoff"],c:0,tip:"Das Kalkwasser trübt sich.",erkl:"Leitet man Kohlenstoffdioxid in Kalkwasser ein, trübt sich die Flüssigkeit."},
-{w:3,ab:1,q:"Welches Gas weist die Glimmspanprobe nach?",a:["Sauerstoff","Kohlenstoffdioxid","Wasserdampf","Stickstoff"],c:0,tip:"Der glimmende Span flammt auf.",erkl:"Sauerstoff lässt einen glimmenden Holzspan wieder aufflammen (Glimmspanprobe)."},
-{w:3,ab:1,q:"Mit welchem Gerät misst man das Volumen einer Flüssigkeit?",a:["Messzylinder","Waage","Thermometer","Lupe"],c:0,tip:"Das Wort enthält schon 'Mess'.",erkl:"Der Messzylinder misst Volumen, die Waage die Masse, das Thermometer die Temperatur."},
-{w:3,ab:2,q:"Ein Stück Butter macht Papier dauerhaft durchscheinend. Welcher Nachweis ist das und was zeigt er?",a:["Fettfleckprobe – sie weist Fett nach","Stärkenachweis – er weist Zucker nach","Glimmspanprobe – sie weist Sauerstoff nach","Kalkwasserprobe – sie weist CO₂ nach"],c:0,tip:"Fett hinterlässt bleibende Flecken.",erkl:"Fett hinterlässt auf Papier dauerhafte Flecken, die das Papier durchscheinend machen – die Fettfleckprobe."},
-{w:3,ab:2,q:"Was passiert beim Lösen eines Zuckerkristalls im Teilchenmodell?",a:["Die Zuckerteilchen verteilen sich zwischen den Wasserteilchen","Die Zuckerteilchen verschwinden vollständig","Die Wasserteilchen werden zu Zucker","Der Zucker wird zu Gas"],c:0,tip:"Die Teilchen sind noch da, nur verteilt.",erkl:"Beim Lösen verteilen sich die Zuckerteilchen gleichmäßig zwischen den Wasserteilchen – sie verschwinden nicht, man sieht sie nur nicht mehr."},
-{w:3,ab:2,q:"Wovon hängt der Aggregatzustand eines Stoffes ab?",a:["Von der Temperatur","Von der Farbe","Vom Gewicht der Probe","Vom Behälter"],c:0,tip:"Eis, Wasser, Wasserdampf – was ändert sich?",erkl:"Der Aggregatzustand (fest/flüssig/gasförmig) hängt von der Temperatur ab; Schmelz- und Siedetemperatur sind die Grenzen."},
-{w:3,ab:2,q:"Du sollst Zellen untersuchen, die mit bloßem Auge unsichtbar sind. Welches Gerät wählst du?",a:["Lichtmikroskop","Lupe","Becherglas","Messzylinder"],c:0,tip:"Die Lupe vergrößert nur schwach.",erkl:"Das Lichtmikroskop vergrößert stark genug, um Zellbestandteile zu erkennen. Eine Lupe oder ein Binokular vergrößern deutlich schwächer."},
-{w:3,ab:2,q:"Wasser fängt bei 100 °C an zu kochen und wird zu Wasserdampf. Was beschreibt diese Temperatur?",a:["Die Siedetemperatur (flüssig → gasförmig)","Die Schmelztemperatur (fest → flüssig)","Die Gefriertemperatur","Die Raumtemperatur"],c:0,tip:"Welcher Übergang passiert beim Kochen?",erkl:"Beim Kochen geht Wasser vom flüssigen in den gasförmigen Zustand über – das geschieht ab der Siedetemperatur."},
-{w:3,ab:3,q:"BOSS: Du willst beweisen, dass eine Wasserpflanze im Licht Sauerstoff produziert. Welchen Nachweis nutzt du an dem aufgefangenen Gas?",a:["Die Glimmspanprobe – flammt der Span auf, ist es Sauerstoff","Die Kalkwasserprobe","Die Stärkeprobe mit Lugol","Die Fettfleckprobe"],c:0,tip:"Welcher Nachweis passt zu Sauerstoff?",erkl:"Bei der Photosynthese entsteht Sauerstoff. Sauerstoff lässt einen glimmenden Span aufflammen – also die Glimmspanprobe."},
+/* ============ WELT 3: Stoffe & Labor ============ */
+{w:3,ab:1,type:"sort",op:"Zuordnen",q:"Ordne jedes Laborgerät seiner Funktion zu.",cats:["Messen","Betrachten","Erhitzen"],items:[{t:"Messzylinder",cat:0},{t:"Waage",cat:0},{t:"Thermometer",cat:0},{t:"Lupe",cat:1},{t:"Lichtmikroskop",cat:1},{t:"Gasbrenner",cat:2}],tip:"Womit misst man, womit schaut man, womit macht man heiß?",erkl:"Messen: Messzylinder (Volumen), Waage (Masse), Thermometer (Temperatur). Betrachten: Lupe, Mikroskop. Erhitzen: Gasbrenner."},
+{w:3,ab:1,type:"sort",op:"Zuordnen",q:"Ordne jeden Nachweis dem Stoff zu, den er anzeigt.",cats:["Stärke","Kohlenstoffdioxid","Sauerstoff"],items:[{t:"Lugol'sche Lösung (blau-violett)",cat:0},{t:"Kalkwasser trübt sich",cat:1},{t:"Glimmspan flammt auf",cat:2}],tip:"Welche Probe gehört zu welchem Stoff?",erkl:"Lugol → Stärke (blau-violett). Kalkwasser-Trübung → Kohlenstoffdioxid. Aufflammender Glimmspan → Sauerstoff."},
+{w:3,ab:1,type:"order",op:"Ordnen",q:"Ordne die Aggregatzustände vom kältesten zum wärmsten.",items:["fest","flüssig","gasförmig"],tip:"Eis → Wasser → Wasserdampf.",erkl:"Mit steigender Temperatur geht ein Stoff von fest über flüssig zu gasförmig über (Schmelz- und Siedetemperatur sind die Grenzen)."},
+{w:3,ab:1,type:"mc",op:"Auswählen",q:"Wähle aus: Wie heißt die Temperatur, ab der ein Stoff flüssig wird?",a:["Schmelztemperatur","Siedetemperatur","Gefriertemperatur","Raumtemperatur"],c:0,tip:"Denk an schmelzendes Eis.",erkl:"Ab der Schmelztemperatur geht ein Stoff vom festen in den flüssigen Zustand über."},
+{w:3,ab:1,type:"mc",op:"Auswählen",q:"Wähle aus: Womit misst man das Volumen einer Flüssigkeit?",a:["Messzylinder","Waage","Thermometer","Lupe"],c:0,tip:"Das Wort enthält schon 'Mess'.",erkl:"Der Messzylinder misst Volumen, die Waage die Masse, das Thermometer die Temperatur."},
+{w:3,ab:1,type:"sort",op:"Zuordnen",q:"Ordne jeden Übergang dem richtigen Vorgang zu.",cats:["Schmelzen","Sieden"],items:[{t:"fest → flüssig",cat:0},{t:"Eis wird zu Wasser",cat:0},{t:"flüssig → gasförmig",cat:1},{t:"Wasser wird zu Dampf",cat:1}],tip:"Schmelzen betrifft den festen Zustand.",erkl:"Schmelzen: fest → flüssig (ab Schmelztemperatur). Sieden: flüssig → gasförmig (ab Siedetemperatur)."},
+{w:3,ab:2,type:"explain",op:"Erklären",q:"Erkläre, was beim Lösen von Zucker im Wasser passiert.",claim:"Rührst du Zucker in Tee, verschwindet er scheinbar – der Tee wird aber süß.",parts:[
+  {q:"Was passiert mit den Zuckerteilchen (Teilchenmodell)?",a:["Sie verteilen sich gleichmäßig zwischen den Wasserteilchen","Sie verschwinden vollständig","Sie werden zu Wasserteilchen"],c:0},
+  {q:"Woran merkt man, dass sie noch da sind?",a:["Der Tee schmeckt süß","Der Tee wird fest","Der Tee wird zu Gas"],c:0}],
+  tip:"Verschwunden heißt nicht weg.",erkl:"Beim Lösen verteilen sich die Zuckerteilchen zwischen den Wasserteilchen. Sie sind weiter vorhanden – man schmeckt sie."},
+{w:3,ab:2,type:"explain",op:"Erläutern",q:"Erläutere, wie die Glimmspanprobe funktioniert.",claim:"Du hältst einen glimmenden Holzspan in ein unbekanntes Gas.",parts:[
+  {q:"Was beobachtest du bei Sauerstoff?",a:["Der glimmende Span flammt wieder auf","Der Span erlischt sofort","Der Span wird grün"],c:0},
+  {q:"Was wird damit nachgewiesen?",a:["Sauerstoff","Kohlenstoffdioxid","Stärke"],c:0}],
+  tip:"Welches Gas fördert das Brennen?",erkl:"Sauerstoff lässt einen glimmenden Span wieder aufflammen – so weist die Glimmspanprobe Sauerstoff nach."},
+{w:3,ab:2,type:"mc",op:"Erklären",q:"Erkläre, warum der Aggregatzustand von der Temperatur abhängt.",a:["Steigt die Temperatur, bewegen sich die Teilchen stärker – ab Schmelz- bzw. Siedetemperatur ändert sich der Zustand","Die Farbe des Stoffes bestimmt den Zustand","Das Gewicht der Probe bestimmt den Zustand","Der Behälter bestimmt den Zustand"],c:0,tip:"Eis, Wasser, Dampf – was ändert sich?",erkl:"Mit der Temperatur ändert sich die Teilchenbewegung. Ab der Schmelz- bzw. Siedetemperatur wechselt der Stoff seinen Aggregatzustand."},
+{w:3,ab:2,type:"mc",op:"Erklären",q:"Erkläre, warum man für Zellen ein Lichtmikroskop und nicht nur eine Lupe braucht.",a:["Zellen sind so klein, dass nur die starke Vergrößerung des Mikroskops sie sichtbar macht","Eine Lupe ist zu teuer","Das Mikroskop erhitzt die Probe","Die Lupe misst nur das Volumen"],c:0,tip:"Wie stark vergrößert eine Lupe?",erkl:"Eine Lupe vergrößert nur schwach. Zellbestandteile sind so klein, dass erst die starke Vergrößerung des Lichtmikroskops sie sichtbar macht."},
+{w:3,ab:2,type:"explain",op:"Erläutern",q:"Erläutere die Fettfleckprobe an einem Beispiel.",claim:"Ein Butterbrot hinterlässt auf der Papiertüte einen Fleck.",parts:[
+  {q:"Was zeigt ein durchscheinender, bleibender Fleck?",a:["Dass Fett enthalten ist","Dass Stärke enthalten ist","Dass Sauerstoff enthalten ist"],c:0},
+  {q:"Wie unterscheidet sich der Fleck von einem Wasserfleck?",a:["Er bleibt dauerhaft und macht das Papier durchscheinend","Er trocknet vollständig weg","Er färbt das Papier blau-violett"],c:0}],
+  tip:"Fett hinterlässt bleibende Spuren.",erkl:"Fett hinterlässt auf Papier einen dauerhaften, durchscheinenden Fleck – anders als Wasser, das wegtrocknet. Das ist die Fettfleckprobe."},
+{w:3,ab:3,type:"compare",op:"Vergleichen",q:"Vergleiche die Glimmspanprobe und die Kalkwasserprobe.",left:"Nur Glimmspanprobe",right:"Nur Kalkwasserprobe",items:[{t:"weist Sauerstoff nach",cat:0},{t:"Span flammt auf",cat:0},{t:"weist Kohlenstoffdioxid nach",cat:2},{t:"Flüssigkeit trübt sich",cat:2},{t:"ist ein Gasnachweis",cat:1},{t:"man beobachtet eine Veränderung",cat:1}],
+  midLabel:"Beides",boss:true,tip:"Beide weisen ein Gas nach – aber ein anderes und mit anderem Effekt.",erkl:"Glimmspanprobe: Sauerstoff (Span flammt auf). Kalkwasserprobe: Kohlenstoffdioxid (Trübung). Beide sind Gasnachweise mit beobachtbarer Veränderung."},
 
-/* ===== WELT 4: Forscher & Code ===== */
-{w:4,ab:1,q:"Womit beginnt eine naturwissenschaftliche Untersuchung?",a:["Mit einem Phänomen (einer Beobachtung)","Mit der Folgerung","Mit dem Aufräumen","Mit dem Ergebnis"],c:0,tip:"Am Anfang steht etwas, das man beobachtet.",erkl:"Ablauf: Phänomen → Hypothese → Planung → Durchführung → Beobachtung → Folgerung."},
-{w:4,ab:1,q:"In der Schreibweise rechteck1.füllfarbe = grün – was ist 'füllfarbe'?",a:["Ein Attribut","Eine Methode","Eine Klasse","Ein Objekt"],c:0,tip:"Es beschreibt eine Eigenschaft des Objekts.",erkl:"Eigenschaften von Objekten werden durch Attribute und deren Werte beschrieben: rechteck1.füllfarbe = grün."},
-{w:4,ab:1,q:"Was ist 'RECHTECK' (in Großbuchstaben)?",a:["Eine Klasse (Vorlage)","Ein einzelnes Objekt","Ein Attributwert","Eine Methode"],c:0,tip:"Nach dieser Vorlage werden gleichartige Objekte erzeugt.",erkl:"Eine Klasse ist die Vorlage für gleichartige Objekte mit denselben Attributen und Methoden, z. B. RECHTECK."},
-{w:4,ab:1,q:"Was zeigt eine Objektkarte?",a:["Die Attribute und aktuellen Attributwerte eines Objekts","Nur den Namen des Programmierers","Die Geschwindigkeit des Computers","Eine Landkarte"],c:0,tip:"Sie 'fotografiert' den Zustand eines Objekts.",erkl:"Eine Objektkarte stellt ein Objekt mit seinen Attributen und deren aktuellen Werten dar."},
-{w:4,ab:1,q:"Bei rechteck1.drehenUm(45°) – was ist 'drehenUm'?",a:["Eine Methode","Ein Attribut","Eine Klasse","Ein Wert"],c:0,tip:"Das Objekt führt damit etwas aus.",erkl:"Objekte können Methoden ausführen. drehenUm(45°) ist ein Methodenaufruf in Punktnotation; der Wert in Klammern ist der Drehwinkel."},
-{w:4,ab:1,q:"Welches Diagramm eignet sich am besten, um eine Messung über die Tageszeit darzustellen?",a:["Liniendiagramm","Säulendiagramm für einzelne Kategorien","Kreisdiagramm","Objektkarte"],c:0,tip:"Werte, die sich kontinuierlich verändern, verbindet man.",erkl:"Ein Liniendiagramm zeigt Verläufe über die Zeit gut. Säulendiagramme eignen sich für den Vergleich einzelner Werte/Kategorien."},
-{w:4,ab:2,q:"Bei einem Experiment: Was ist die 'unabhängige Variable'?",a:["Die Größe, die man gezielt verändert","Die Größe, die man misst","Eine Größe, die konstant bleibt","Ein zufälliger Messfehler"],c:0,tip:"Sie ist die Ursache, die du selbst einstellst.",erkl:"Die unabhängige Variable wird gezielt verändert. Ihre Wirkung auf die abhängige (gemessene) Variable wird untersucht."},
-{w:4,ab:2,q:"Was muss man mit allen weiteren Einflussgrößen tun, damit ein Experiment aussagekräftig ist?",a:["Sie in allen Ansätzen konstant halten","Sie ebenfalls ständig verändern","Sie weglassen und ignorieren","Sie zufällig auswählen"],c:0,tip:"Nur eine Größe darf sich ändern.",erkl:"Alle anderen Größen, die das Ergebnis beeinflussen könnten, müssen konstant gehalten werden – sonst weiß man nicht, was die Wirkung verursacht hat."},
-{w:4,ab:2,q:"„Ich kaufe lieber Eier aus Freilandhaltung, weil mir Tierwohl wichtiger ist.“ Was für eine Aussage ist das?",a:["Eine bewertende Aussage","Eine beschreibende Aussage","Eine Messung","Eine Hypothese"],c:0,tip:"Es kommt eine persönliche Meinung vor.",erkl:"Bewertende Aussagen beziehen sich auf Werte und geben eine persönliche Meinung wieder. Beschreibende Aussagen stellen einen überprüfbaren Sachverhalt dar."},
-{w:4,ab:2,q:"In rechteck1.füllfarbe = grün – was ist 'rechteck1'?",a:["Ein Objekt (nach der Vorlage einer Klasse erzeugt)","Eine Klasse","Eine Methode","Ein Diagramm"],c:0,tip:"Es wird nach einer Vorlage (Klasse) erzeugt.",erkl:"rechteck1 ist ein konkretes Objekt, erzeugt nach der Vorlage der Klasse RECHTECK. Es hat eigene Attributwerte."},
-{w:4,ab:3,q:"BOSS: Du untersuchst, ob mehr Dünger Tomaten höher wachsen lässt. Welche Planung ist korrekt?",a:["Düngermenge gezielt verändern (unabhängig), Pflanzenhöhe messen (abhängig), Licht/Wasser/Topf konstant halten","Alle Größen gleichzeitig verändern, damit es schneller geht","Nur eine einzige Pflanze beobachten und raten","Die Höhe verändern und den Dünger messen"],c:0,tip:"Was veränderst du, was misst du, was hältst du gleich?",erkl:"Unabhängige Variable = Düngermenge (gezielt verändert), abhängige Variable = Höhe (gemessen). Licht, Wasser und Topfgröße müssen konstant bleiben."},
-
-/* ===== FINALE: Welt-übergreifender Endboss (zählt zu Welt 4) ===== */
-{w:4,ab:3,q:"ENDBOSS: Ein Apfelbaum betreibt tagsüber im Licht Photosynthese. Welcher Prozess liefert seinen Zellen aber Tag UND Nacht Energie?",a:["Die Zellatmung – sie läuft in allen lebenden Zellen ständig ab","Die Photosynthese, auch nachts","Die Bestäubung","Die Verdunstung"],c:0,tip:"Photosynthese braucht Licht – Energiegewinnung der Zelle aber immer.",erkl:"Photosynthese funktioniert nur im Licht. Die Zellatmung (Traubenzucker + Sauerstoff → CO₂ + Wasser) läuft dagegen ständig in allen lebenden Zellen ab und liefert nutzbare Energie."}
+/* ============ WELT 4: Forscher & Code ============ */
+{w:4,ab:1,type:"order",op:"Ordnen",q:"Ordne die Schritte einer naturwissenschaftlichen Untersuchung.",items:["Phänomen","Hypothese","Planung","Durchführung","Beobachtung","Folgerung"],tip:"Erst beobachten und vermuten, ganz am Ende folgern.",erkl:"Ablauf: Phänomen → Hypothese → Planung → Durchführung → Beobachtung → Folgerung."},
+{w:4,ab:1,type:"sort",op:"Zuordnen",q:"Ordne jeden Begriff der Informatik richtig zu (Punktnotation rechteck1.füllfarbe = grün).",cats:["Objekt","Attribut","Methode"],items:[{t:"rechteck1",cat:0},{t:"füllfarbe",cat:1},{t:"länge",cat:1},{t:"drehenUm()",cat:2},{t:"spiegeln()",cat:2}],tip:"Was hat Klammern? Was ist eine Eigenschaft?",erkl:"Objekt: rechteck1. Attribute (Eigenschaften): füllfarbe, länge. Methoden (Aktionen, mit Klammern): drehenUm(), spiegeln()."},
+{w:4,ab:1,type:"sort",op:"Zuordnen",q:"Ordne zu: Welches Diagramm passt zu welcher Aufgabe?",cats:["Liniendiagramm","Säulendiagramm"],items:[{t:"Temperatur über den Tag",cat:0},{t:"Verlauf über die Zeit",cat:0},{t:"Vergleich einzelner Klassen",cat:1},{t:"Anzahl pro Kategorie",cat:1}],tip:"Verläufe verbindet man, einzelne Werte stellt man nebeneinander.",erkl:"Liniendiagramm: Verläufe über die Zeit. Säulendiagramm: Vergleich einzelner Werte/Kategorien."},
+{w:4,ab:1,type:"mc",op:"Auswählen",q:"Wähle aus: Was ist 'RECHTECK' (in Großbuchstaben)?",a:["Eine Klasse (Vorlage)","Ein einzelnes Objekt","Ein Attributwert","Eine Methode"],c:0,tip:"Nach dieser Vorlage werden Objekte erzeugt.",erkl:"Eine Klasse ist die Vorlage für gleichartige Objekte mit denselben Attributen und Methoden, z. B. RECHTECK."},
+{w:4,ab:1,type:"mc",op:"Auswählen",q:"Wähle aus: Was zeigt eine Objektkarte?",a:["Die Attribute und aktuellen Attributwerte eines Objekts","Nur den Namen des Programmierers","Die Geschwindigkeit des Computers","Eine Landkarte"],c:0,tip:"Sie 'fotografiert' den Zustand eines Objekts.",erkl:"Eine Objektkarte stellt ein Objekt mit seinen Attributen und deren aktuellen Werten dar."},
+{w:4,ab:1,type:"mc",op:"Auswählen",q:"Wähle aus: Welches Diagramm eignet sich für eine Messung über die Tageszeit?",a:["Liniendiagramm","Säulendiagramm für einzelne Kategorien","Kreisdiagramm","Objektkarte"],c:0,tip:"Werte, die sich laufend verändern, verbindet man.",erkl:"Ein Liniendiagramm zeigt Verläufe über die Zeit gut; Säulendiagramme vergleichen einzelne Werte."},
+{w:4,ab:2,type:"explain",op:"Erklären",q:"Erkläre, warum man bei einem Experiment nur eine Größe verändern darf.",claim:"Du testest, ob mehr Licht Pflanzen schneller wachsen lässt.",parts:[
+  {q:"Begründung – warum nur eine Größe ändern?",a:["Sonst weiß man nicht, welche Größe die Wirkung verursacht hat","Damit das Experiment schneller geht","Damit man weniger messen muss"],c:0},
+  {q:"Was machst du mit Wasser, Topf und Erde?",a:["In allen Ansätzen konstant halten","Ebenfalls ständig verändern","Ganz weglassen"],c:0}],
+  tip:"Nur die unabhängige Variable darf sich ändern.",erkl:"Nur die unabhängige Variable wird verändert; alle anderen Einflussgrößen müssen konstant bleiben – sonst ist die Ursache der Wirkung unklar."},
+{w:4,ab:2,type:"explain",op:"Erläutern",q:"Erläutere den Begriff 'Attribut' an einem Beispiel.",claim:"Schreibweise: rechteck1.füllfarbe = grün",parts:[
+  {q:"Was ist ein Attribut?",a:["Eine Eigenschaft eines Objekts","Eine Aktion, die das Objekt ausführt","Die Vorlage für viele Objekte"],c:0},
+  {q:"Welcher Teil ist hier der Wert des Attributs?",a:["grün","rechteck1","füllfarbe"],c:0}],
+  tip:"Attribut = Eigenschaft, danach steht ihr Wert.",erkl:"Ein Attribut ist eine Eigenschaft eines Objekts. In rechteck1.füllfarbe = grün ist 'füllfarbe' das Attribut und 'grün' sein Wert."},
+{w:4,ab:2,type:"mc",op:"Erklären",q:"Erkläre, was eine Klasse ist und wie sie mit Objekten zusammenhängt.",a:["Eine Klasse ist die Vorlage; nach ihr werden gleichartige Objekte erzeugt (z. B. rechteck1 nach RECHTECK)","Eine Klasse ist ein einzelnes Objekt","Eine Klasse ist ein Attributwert","Eine Klasse ist eine Methode"],c:0,tip:"Vorlage und danach gebaute Exemplare.",erkl:"Eine Klasse (z. B. RECHTECK) ist die Vorlage. Konkrete Objekte wie rechteck1 werden nach dieser Vorlage erzeugt und haben eigene Attributwerte."},
+{w:4,ab:2,type:"mc",op:"Erklären",q:"Erkläre, warum die Aussage „Ich kaufe lieber Eier aus Freilandhaltung, weil mir Tierwohl wichtig ist“ eine bewertende Aussage ist.",a:["Weil sie eine persönliche Meinung ausdrückt und sich auf Werte bezieht","Weil sie eine messbare Tatsache nennt","Weil sie eine Hypothese ist","Weil sie eine Frage stellt"],c:0,tip:"Steckt da eine Meinung drin?",erkl:"Bewertende Aussagen geben eine persönliche Meinung wieder und beziehen sich auf Werte – im Gegensatz zu beschreibenden, überprüfbaren Aussagen."},
+{w:4,ab:2,type:"explain",op:"Erklären",q:"Erkläre, warum man Messwerte über die Zeit in einem Liniendiagramm darstellt.",claim:"Du misst jede Stunde die Temperatur im Klassenzimmer.",parts:[
+  {q:"Warum eignet sich ein Liniendiagramm?",a:["Weil es den Verlauf der Werte über die Zeit anschaulich verbindet","Weil es bunter ist","Weil man dann nicht messen muss"],c:0},
+  {q:"Wofür eignet sich dagegen ein Säulendiagramm besser?",a:["Für den Vergleich einzelner Kategorien","Für Verläufe über die Zeit","Für Punktnotation"],c:0}],
+  tip:"Verläufe verbindet man, einzelne Werte stellt man nebeneinander.",erkl:"Ein Liniendiagramm zeigt den Verlauf über die Zeit. Ein Säulendiagramm eignet sich für den Vergleich einzelner Werte/Kategorien."},
+{w:4,ab:3,type:"compare",op:"Vergleichen",q:"Vergleiche beschreibende und bewertende Aussagen.",left:"Beschreibend",right:"Bewertend",items:[{t:"nennt einen überprüfbaren Sachverhalt",cat:0},{t:"„Ein Huhn hat im Auslauf 4 m² Platz.“",cat:0},{t:"drückt eine persönliche Meinung aus",cat:2},{t:"„Freilandhaltung ist besser.“",cat:2},{t:"ist eine Aussage über Hühnerhaltung",cat:1},{t:"steht in einem Satz",cat:1}],
+  midLabel:"Beides",boss:true,tip:"Lässt sich die Aussage nachprüfen oder ist sie Meinung?",erkl:"Beschreibende Aussagen nennen überprüfbare Sachverhalte; bewertende Aussagen drücken eine persönliche Meinung aus. Beide sind hier Aussagen zum selben Thema."}
 ];
 
 const ACHIEVEMENTS = [
@@ -354,7 +451,7 @@ function renderMap(){
 /* ====================== GAME ====================== */
 function startWorld(w){
   if(!S.player){ show('start'); document.getElementById('playerName').focus(); return; }
-  const qs = Q.filter(q=>q.w===w).map(q=>shuffleOpts(q));
+  const qs = Q.filter(q=>q.w===w).map(prepTask);
   shuffle(qs);
   G={w, qs, i:0, lives:3, score:0, mult:1, streak:0, right:0, coins:0,
      used:{}, answered:false};
@@ -362,13 +459,28 @@ function startWorld(w){
 }
 function replayWorld(){ startWorld(G.w); }
 
-function shuffleOpts(q){
-  // Antwortreihenfolge mischen, korrekten Index nachführen
-  const idx=q.a.map((_,k)=>k); shuffle(idx);
-  const a=idx.map(k=>q.a[k]); const c=idx.indexOf(q.c);
-  return {ab:q.ab, q:q.q, a, c, tip:q.tip, erkl:q.erkl, boss:q.q.startsWith("BOSS")||q.q.startsWith("ENDBOSS")};
+// Bereitet eine Aufgabe vor (mischt Optionen / Karten), ohne das Original zu verändern
+function prepTask(src){
+  const q=Object.assign({}, src);
+  if(q.type==="mc"){
+    const idx=q.a.map((_,k)=>k); shuffle(idx);
+    q.a=idx.map(k=>src.a[k]); q.c=idx.indexOf(src.c);
+  } else if(q.type==="explain"){
+    q.parts=src.parts.map(p=>{
+      const idx=p.a.map((_,k)=>k); shuffle(idx);
+      return {q:p.q, a:idx.map(k=>p.a[k]), c:idx.indexOf(p.c)};
+    });
+  } else if(q.type==="order"){
+    q.pool=src.items.map((_,k)=>k); shuffle(q.pool); // gemischte Original-Indizes
+  } else if(q.type==="sort"||q.type==="compare"){
+    q._cats = q.type==="compare" ? [src.left, src.midLabel||"Beides", src.right] : src.cats.slice();
+    q.items=src.items.map((it,k)=>({t:it.t,cat:it.cat,id:k})); shuffle(q.items);
+  } else if(q.type==="label"){
+    q.pool = src.slots.map(s=>s.term); shuffle(q.pool);
+  }
+  return q;
 }
-function shuffle(arr){ for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];} }
+function shuffle(arr){ for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];} return arr; }
 
 function renderHUD(){
   document.getElementById("hWorld").textContent=`${WORLDS[G.w].emoji} ${WORLDS[G.w].name}`;
@@ -378,34 +490,239 @@ function renderHUD(){
   document.getElementById("hScore").textContent=G.score;
   document.getElementById("hBar").style.width=(G.i/G.qs.length*100)+"%";
 }
+const OPDESC={mc:"Tippe die richtige Antwort an.",
+  order:"Tippe die Bausteine in der richtigen Reihenfolge an. Erneutes Tippen nimmt einen Baustein zurück.",
+  sort:"Tippe eine Karte an und danach die passende Gruppe.",
+  compare:"Tippe eine Karte an und danach das passende Feld (nur links, beides oder nur rechts).",
+  label:"Tippe einen Begriff an und danach die passende Nummer im Schaubild.",
+  explain:"Beantworte beide Teilfragen – Begründung und Beispiel."};
 function renderQ(){
-  G.answered=false; G.used={};
+  G.answered=false; G.used={}; G.sel=null; G.selTerm=null; G.assign={}; G.seq=[]; G.picks=[]; G.mcPick=null;
   const q=G.qs[G.i];
   document.getElementById("qIdx").textContent=G.i+1;
   document.getElementById("qTot").textContent=G.qs.length;
   const abEl=document.getElementById("qAb");
   abEl.className="abtag ab"+q.ab;
-  abEl.textContent = q.boss ? "🐲 BOSS · AB3" : ("AB"+q.ab+" · "+["","Reproduktion","Reorganisation","Transfer"][q.ab]);
-  document.getElementById("qText").textContent=q.q.replace(/^(END)?BOSS: /,"");
-  const ans=document.getElementById("qAns"); ans.innerHTML="";
-  q.a.forEach((opt,k)=>{
-    const b=document.createElement("button");
-    b.className="opt"; b.textContent=opt; b.onclick=()=>answer(k);
-    ans.appendChild(b);
-  });
+  abEl.textContent=(q.boss?"🐲 ":"")+"AFB "+q.ab+" · "+q.op;
+  document.getElementById("qText").textContent=q.q;
+  const op=document.getElementById("qOp"); op.textContent=OPDESC[q.type]||""; op.classList.remove("hidden");
+  const ans=document.getElementById("qAns"); ans.innerHTML=""; ans.style.pointerEvents="";
+  if(q.type==="mc") renderMC(q,ans); else
+  if(q.type==="order") renderOrder(q,ans); else
+  if(q.type==="sort"||q.type==="compare") renderBuckets(q,ans); else
+  if(q.type==="label") renderLabel(q,ans); else
+  if(q.type==="explain") renderExplain(q,ans);
+  document.getElementById("checkRow").classList.toggle("hidden", q.type==="mc");
   document.getElementById("qFb").classList.add("hidden");
   document.getElementById("nextRow").classList.add("hidden");
-  renderPowers();
-  renderHUD();
+  updateCheck();
+  renderPowers(); renderHUD();
 }
+
+/* ---- Renderer: Multiple Choice (Auswählen) ---- */
+function renderMC(q,ans){
+  q.a.forEach((opt,k)=>{
+    const b=document.createElement("button"); b.className="opt"; b.textContent=opt;
+    if(G.answered){ if(k===q.c) b.classList.add("correct"); else if(G.mcPick===k) b.classList.add("wrong"); }
+    else b.onclick=()=>answerMC(k);
+    ans.appendChild(b);
+  });
+}
+function answerMC(k){ if(G.answered) return; G.mcPick=k; const q=G.qs[G.i]; resolve(k===q.c, 0, q); }
+
+/* ---- Renderer: Ordnen (Reihenfolge) ---- */
+function renderOrder(q,ans){
+  const box=document.createElement("div"); box.className="seqbox";
+  if(G.seq.length===0){ const ph=document.createElement("span"); ph.className="ph"; ph.textContent="Tippe unten die Bausteine in der richtigen Reihenfolge an …"; box.appendChild(ph); }
+  G.seq.forEach((origIdx,pos)=>{
+    const el=document.createElement("span"); el.className="seqitem";
+    el.innerHTML=`<b>${pos+1}</b>`; el.appendChild(document.createTextNode(q.items[origIdx]));
+    if(!G.answered) el.onclick=()=>{ G.seq.splice(pos,1); renderQ_keep(); };
+    if(G.answered) el.classList.add(origIdx===pos?"correct":"wrong");
+    box.appendChild(el);
+  });
+  ans.appendChild(box);
+  const pool=document.createElement("div"); pool.className="pool";
+  q.pool.forEach(origIdx=>{
+    if(G.seq.includes(origIdx)) return;
+    const c=document.createElement("span"); c.className="chip";
+    c.textContent=q.items[origIdx];
+    c.onclick=()=>{ G.seq.push(origIdx); renderQ_keep(); };
+    pool.appendChild(c);
+  });
+  ans.appendChild(pool);
+}
+function checkOrder(q){ let ok=0; G.seq.forEach((origIdx,pos)=>{ if(origIdx===pos) ok++; }); return ok/q.items.length; }
+
+/* ---- Renderer: Zuordnen / Vergleichen (Karten in Felder) ---- */
+function renderBuckets(q,ans){
+  const cats=q._cats;
+  const pool=document.createElement("div"); pool.className="pool";
+  q.items.forEach((it,k)=>{
+    if(G.assign[k]!=null) return;
+    const c=document.createElement("span"); c.className="chip"+(G.sel===k?" sel":"");
+    c.textContent=it.t;
+    if(!G.answered) c.onclick=()=>{ G.sel=(G.sel===k?null:k); renderQ_keep(); };
+    pool.appendChild(c);
+  });
+  ans.appendChild(pool);
+  const zones=document.createElement("div");
+  zones.className="zones "+(cats.length===3?"three":"two");
+  cats.forEach((cat,ci)=>{
+    const z=document.createElement("div"); z.className="zone"+(q.type==="compare"&&ci===1?" mid":"");
+    const h=document.createElement("h4"); h.textContent=cat; z.appendChild(h);
+    const drop=document.createElement("div"); drop.className="drop";
+    q.items.forEach((it,k)=>{
+      if(G.assign[k]!==ci) return;
+      const c=document.createElement("span"); c.className="chip";
+      c.textContent=it.t;
+      if(G.answered) c.classList.add(it.cat===ci?"correct":"wrong");
+      else c.onclick=(e)=>{ e.stopPropagation(); delete G.assign[k]; G.sel=null; renderQ_keep(); };
+      drop.appendChild(c);
+    });
+    z.appendChild(drop);
+    if(!G.answered) z.onclick=()=>{ if(G.sel!=null){ G.assign[G.sel]=ci; G.sel=null; renderQ_keep(); } };
+    zones.appendChild(z);
+  });
+  ans.appendChild(zones);
+}
+function checkBuckets(q){ let ok=0; q.items.forEach((it,k)=>{ if(G.assign[k]===it.cat) ok++; }); return ok/q.items.length; }
+
+/* ---- Renderer: Beschriften (Begriffe ins Schaubild) ---- */
+function renderLabel(q,ans){
+  const dia=document.createElement("div"); dia.className="diagram"; dia.innerHTML=q.svg; ans.appendChild(dia);
+  const slots=document.createElement("div"); slots.className="slots";
+  q.slots.forEach((s,si)=>{
+    const row=document.createElement("div"); row.className="slot"+(G.sel===si?" sel":"");
+    const val=G.assign[si];
+    row.innerHTML=`<span class="num">${s.n}</span><span class="val${val?' filled':''}">${val||"– antippen –"}</span>`;
+    if(G.answered && val) row.classList.add(val===s.term?"correct":"wrong");
+    if(!G.answered) row.onclick=()=>{
+      if(G.selTerm){ // ausgewählten Begriff einsetzen
+        for(const key in G.assign){ if(G.assign[key]===G.selTerm) delete G.assign[key]; }
+        G.assign[si]=G.selTerm; G.selTerm=null; G.sel=null;
+      } else if(G.assign[si]){ delete G.assign[si]; } // belegten Slot leeren
+      else { G.sel=(G.sel===si?null:si); }
+      renderQ_keep();
+    };
+    slots.appendChild(row);
+  });
+  ans.appendChild(slots);
+  const pool=document.createElement("div"); pool.className="pool";
+  q.pool.forEach(term=>{
+    const used=Object.values(G.assign).includes(term);
+    const c=document.createElement("span"); c.className="chip"+(used?" used":"")+(G.selTerm===term?" sel":"");
+    c.textContent=term;
+    if(!G.answered && !used) c.onclick=()=>{
+      if(G.sel!=null){ // vorgewählten Slot füllen
+        for(const key in G.assign){ if(G.assign[key]===term) delete G.assign[key]; }
+        G.assign[G.sel]=term; G.sel=null; G.selTerm=null;
+      } else { G.selTerm=(G.selTerm===term?null:term); }
+      renderQ_keep();
+    };
+    pool.appendChild(c);
+  });
+  ans.appendChild(pool);
+}
+function checkLabel(q){ let ok=0; q.slots.forEach((s,si)=>{ if(G.assign[si]===s.term) ok++; }); return ok/q.slots.length; }
+
+/* ---- Renderer: Erklären / Erläutern (Begründung + Beispiel) ---- */
+function renderExplain(q,ans){
+  if(q.claim){ const cl=document.createElement("div"); cl.className="claim"; cl.textContent=q.claim; ans.appendChild(cl); }
+  q.parts.forEach((p,pi)=>{
+    const part=document.createElement("div"); part.className="epart";
+    const pq=document.createElement("div"); pq.className="pq"; pq.textContent=(pi+1)+". "+p.q; part.appendChild(pq);
+    p.a.forEach((opt,k)=>{
+      const b=document.createElement("button"); b.className="opt"; b.textContent=opt;
+      if(G.answered){ if(k===p.c) b.classList.add("correct"); else if(G.picks[pi]===k) b.classList.add("wrong"); }
+      else { if(G.picks[pi]===k) b.classList.add("sel"); b.onclick=()=>{ G.picks[pi]=k; renderQ_keep(); }; }
+      part.appendChild(b);
+    });
+    ans.appendChild(part);
+  });
+}
+function checkExplain(q){ let ok=0; q.parts.forEach((p,pi)=>{ if(G.picks[pi]===p.c) ok++; }); return ok/q.parts.length; }
+
+/* re-render aktueller Aufgabe ohne Statusreset (für Zwischenschritte) */
+function renderQ_keep(){
+  const q=G.qs[G.i]; const ans=document.getElementById("qAns"); ans.innerHTML="";
+  if(q.type==="order") renderOrder(q,ans); else
+  if(q.type==="sort"||q.type==="compare") renderBuckets(q,ans); else
+  if(q.type==="label") renderLabel(q,ans); else
+  if(q.type==="explain") renderExplain(q,ans);
+  updateCheck();
+}
+/* zeigt die Lösung an (nach dem Prüfen, mit G.answered === true) */
+function revealTask(q){
+  const ans=document.getElementById("qAns"); ans.innerHTML="";
+  if(q.type==="mc") renderMC(q,ans); else
+  if(q.type==="order") renderOrder(q,ans); else
+  if(q.type==="sort"||q.type==="compare") renderBuckets(q,ans); else
+  if(q.type==="label") renderLabel(q,ans); else
+  if(q.type==="explain") renderExplain(q,ans);
+}
+function complete(q){
+  if(q.type==="order") return G.seq.length===q.items.length;
+  if(q.type==="sort"||q.type==="compare") return Object.keys(G.assign).length===q.items.length;
+  if(q.type==="label") return Object.keys(G.assign).length===q.slots.length;
+  if(q.type==="explain") return q.parts.every((_,i)=>G.picks[i]!=null);
+  return false;
+}
+function updateCheck(){ const b=document.getElementById("checkBtn"); if(b) b.disabled=!complete(G.qs[G.i]); }
+
+/* ---- Auswertung (Prüfen-Button für interaktive Formate) ---- */
+function checkTask(){
+  if(G.answered) return;
+  const q=G.qs[G.i]; let frac=0;
+  if(q.type==="order") frac=checkOrder(q);
+  else if(q.type==="sort"||q.type==="compare") frac=checkBuckets(q);
+  else if(q.type==="label") frac=checkLabel(q);
+  else if(q.type==="explain") frac=checkExplain(q);
+  resolve(frac>=0.999, frac, q);
+}
+
+/* ---- Gemeinsame Punkte-/Leben-/Combo-Logik ---- */
+function resolve(ok, frac, q){
+  if(G.answered) return; G.answered=true;
+  document.getElementById("checkRow").classList.add("hidden");
+  revealTask(q);
+  document.getElementById("qAns").style.pointerEvents="none";
+  const base=q.ab*10;
+  if(ok){
+    G.streak++; G.right++;
+    if(G.streak>=2) G.mult=Math.min(5,G.streak);
+    const pts=base*G.mult; G.score+=pts;
+    const earned=q.ab>=3?8:(q.ab===2?5:3);
+    G.coins+=earned; S.coins+=earned;
+    beep(true);
+    if(G.streak>=2) showCombo("🔥 "+G.streak+"er Combo! x"+G.mult);
+    if(G.streak>=5) unlock("combo5");
+    if(q.boss){ S.bossKills++; S.transferKills++; }
+    fb(`✅ <b>Richtig!</b> +${pts} Punkte · +${earned} 🪙<br>${q.erkl}`);
+  } else {
+    G.streak=0; G.mult=1; G.lives--;
+    beep(false);
+    const part=Math.round(base*frac);
+    if(part>0){ G.score+=part; fb(`⚠️ <b>Fast!</b> Teilweise richtig (+${part} Punkte). So stimmt es:<br>${q.erkl}`); }
+    else fb(`❌ <b>Leider nicht richtig.</b> So stimmt es:<br>${q.erkl}`);
+  }
+  if(S.coins>=100) unlock("rich");
+  save(); renderHUD(); renderPowers();
+  const nb=document.getElementById("nextBtn");
+  nb.textContent = G.lives<=0 ? "💀 Welt neu starten" : (G.i>=G.qs.length-1?"🏁 Auswertung":"Weiter ›");
+  document.getElementById("nextRow").classList.remove("hidden");
+}
+
 function renderPowers(){
+  const q=G.qs[G.i];
   const defs=[
-    {id:"5050", name:"50:50", cost:15, ic:"✂️"},
+    {id:"5050", name:"50:50", cost:15, ic:"✂️", only:"mc"},
     {id:"tip",  name:"Tipp", cost:10, ic:"💡"},
     {id:"life", name:"+1 Leben", cost:25, ic:"❤️"}
   ];
   const box=document.getElementById("powers"); box.innerHTML="";
   defs.forEach(p=>{
+    if(p.only && q.type!==p.only) return; // 50:50 nur bei Multiple Choice
     const used=G.used[p.id];
     const can=S.coins>=p.cost && !used && !G.answered && !(p.id==="life"&&G.lives>=3);
     const el=document.createElement("div");
@@ -418,12 +735,12 @@ function renderPowers(){
 function usePower(p){
   S.coins-=p.cost; G.used[p.id]=true; save();
   const q=G.qs[G.i];
-  if(p.id==="5050"){
+  if(p.id==="5050" && q.type==="mc"){
     const wrong=q.a.map((_,k)=>k).filter(k=>k!==q.c); shuffle(wrong);
-    wrong.slice(0,2).forEach(k=>document.querySelectorAll(".opt")[k].classList.add("dim","disabled"));
+    const opts=document.querySelectorAll("#qAns .opt");
+    wrong.slice(0,2).forEach(k=>{ opts[k].classList.add("dim"); opts[k].style.pointerEvents="none"; });
   } else if(p.id==="tip"){
-    fb(`💡 <b>Tipp:</b> ${q.tip}`, false);
-    document.getElementById("qFb").classList.remove("hidden");
+    fb(`💡 <b>Tipp:</b> ${q.tip}`);
   } else if(p.id==="life"){
     G.lives=Math.min(3,G.lives+1);
   }
@@ -431,39 +748,6 @@ function usePower(p){
 }
 function fb(html){ const f=document.getElementById("qFb"); f.innerHTML=html; f.classList.remove("hidden"); }
 
-function answer(k){
-  if(G.answered) return;
-  G.answered=true;
-  const q=G.qs[G.i];
-  const opts=document.querySelectorAll(".opt");
-  opts.forEach(o=>o.classList.add("disabled"));
-  if(k===q.c){
-    opts[k].classList.add("correct");
-    G.streak++; G.right++;
-    if(G.streak>=2) G.mult=Math.min(5,G.streak);
-    const pts=(q.boss?30:q.ab*10)*G.mult;
-    G.score+=pts;
-    const earned=(q.boss?8:3);
-    G.coins+=earned; S.coins+=earned;
-    beep(true);
-    if(G.streak>=2) showCombo("🔥 "+G.streak+"er Combo! x"+G.mult);
-    if(G.streak>=5) unlock("combo5");
-    if(q.boss){ S.bossKills++; S.transferKills++; unlock("boss?check"); }
-    fb(`✅ <b>Richtig!</b> +${pts} Punkte · +${earned} 🪙<br>${q.erkl}`);
-  } else {
-    opts[k].classList.add("wrong");
-    opts[q.c].classList.add("correct");
-    G.streak=0; G.mult=1; G.lives--;
-    beep(false);
-    fb(`❌ <b>Leider falsch.</b><br>${q.erkl}`);
-  }
-  if(S.coins>=100) unlock("rich");
-  save(); renderHUD(); renderPowers();
-  const nb=document.getElementById("nextBtn");
-  if(G.lives<=0){ nb.textContent="💀 Welt neu starten"; }
-  else nb.textContent = (G.i>=G.qs.length-1)?"🏁 Auswertung":"Weiter ›";
-  document.getElementById("nextRow").classList.remove("hidden");
-}
 function nextQ(){
   if(G.lives<=0){ startWorld(G.w); return; }
   G.i++;
