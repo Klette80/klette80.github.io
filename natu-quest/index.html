@@ -295,8 +295,15 @@ const Q = [
   {q:"Welche zwei Kreisläufe gehören dazu?",a:["Lungen- und Körperkreislauf","Magen- und Darmkreislauf","Arm- und Beinkreislauf"],c:0}],
   tip:"Versorgung der Zellen.",erkl:"Der doppelte Blutkreislauf (Lungen- + Körperkreislauf) versorgt über das Herz alle Zellen mit Nährstoffen und Sauerstoff."},
 {w:0,ab:2,type:"mc",op:"Erklären",q:"Erkläre: Wo werden die meisten Nährstoff-Teilchen ins Blut aufgenommen – und warum dort?",a:["Im Dünndarm, weil dort die Darmzotten die Oberfläche stark vergrößern","Im Magen, weil dort die Magensäure ist","Im Mund, weil dort gekaut wird","In der Speiseröhre, weil sie lang ist"],c:0,tip:"Wo sitzen die Darmzotten?",erkl:"Im Dünndarm vergrößern Darmzotten die Oberfläche – dadurch werden dort die meisten Nährstoff-Teilchen ins Blut aufgenommen."},
-{w:0,ab:3,type:"compare",op:"Vergleichen",q:"Vergleiche die pflanzliche und die tierische Zelle: Was hat nur die eine, was haben beide?",left:"Nur Pflanzenzelle",right:"Nur Tierzelle",items:[{t:"Zellwand",cat:0},{t:"Chloroplasten",cat:0},{t:"große Vakuole",cat:0},{t:"Zellkern",cat:1},{t:"Zellmembran",cat:1},{t:"Zellplasma",cat:1}],
-  midLabel:"Beides",boss:true,tip:"Was braucht eine Pflanze zusätzlich (Halt, Photosynthese)?",erkl:"Nur Pflanzenzellen haben Zellwand, Chloroplasten und eine große Vakuole. Zellkern, Zellmembran und Zellplasma besitzen beide Zelltypen."},
+{w:0,ab:3,type:"judge",op:"Bewerten",boss:true,q:"Bewerte eine Aussage über Sport.",
+  scenario:"Ein Kind sagt: „Sport ist schlecht für den Körper, weil man dabei außer Atem kommt.“",
+  verdict:{q:"Stimmt diese Aussage?",a:["Nein, die Aussage ist falsch","Ja, die Aussage stimmt"],c:0},
+  reason:{q:"Wähle die passenden Begründungen:",a:[
+    "Beim Sport brauchen die Muskelzellen mehr Sauerstoff für die Zellatmung – schnelleres Atmen versorgt sie",
+    "Schnelleres Atmen und Herzschlagen versorgt den Körper besser mit Sauerstoff und Nährstoffen",
+    "Außer Atem zu kommen schädigt die Lunge dauerhaft",
+    "Beim Sport hört die Zellatmung auf"],correct:[0,1]},
+  tip:"Warum atmet man bei Anstrengung schneller?",erkl:"Außer Atem zu kommen ist normal: Die Muskeln brauchen bei Anstrengung mehr Sauerstoff für die Zellatmung. Schnelleres Atmen und Herzschlagen liefert ihn – Sport schadet dem Körper dadurch nicht."},
 
 /* ============ WELT 1: Pflanzenreich ============ */
 {w:1,ab:1,type:"label",op:"Benennen",q:"Beschrifte die Organe der Pflanze.",tip:"Von oben nach unten: Fortpflanzung, Photosynthese, Transport, Verankerung.",erkl:"Blüte (Fortpflanzung), Blatt (Photosynthese), Sprossachse (Transport), Wurzel (Verankerung/Wasseraufnahme).",
@@ -321,8 +328,15 @@ const Q = [
   {q:"Begründung – warum?",a:["Ohne Licht keine Photosynthese – die Pflanze stellt keinen Traubenzucker als Energie mehr her","Im Keller gibt es zu viel Sauerstoff","Pflanzen brauchen ständig Tierbestäubung"],c:0},
   {q:"Was würde der Pflanze helfen?",a:["Sie ans Licht (z. B. ans Fenster) stellen","Sie tiefer in den Keller stellen","Ihr die Blätter entfernen"],c:0}],
   tip:"Wofür braucht die Photosynthese Licht?",erkl:"Für die Photosynthese ist Licht nötig. Ohne Licht entsteht kein Traubenzucker – der Pflanze fehlt die Energie. Am Licht erholt sie sich."},
-{w:1,ab:3,type:"compare",op:"Vergleichen",q:"Vergleiche Photosynthese und Zellatmung.",left:"Nur Photosynthese",right:"Nur Zellatmung",items:[{t:"braucht Licht",cat:0},{t:"baut Traubenzucker auf",cat:0},{t:"setzt Energie aus Traubenzucker frei",cat:2},{t:"läuft auch im Dunkeln ab",cat:2},{t:"hat mit Sauerstoff zu tun",cat:1},{t:"hat mit Traubenzucker zu tun",cat:1}],
-  midLabel:"Beides",boss:true,tip:"Beide nutzen Sauerstoff und Traubenzucker – aber in umgekehrter Richtung.",erkl:"Photosynthese braucht Licht und baut Traubenzucker auf; Zellatmung setzt die Energie wieder frei (auch nachts). Beide arbeiten mit Sauerstoff und Traubenzucker – als umgekehrte Reaktionen."},
+{w:1,ab:3,type:"judge",op:"Beurteilen",boss:true,q:"Beurteile, welche Bestäubung besser geeignet ist.",
+  scenario:"Eine Obstwiese soll möglichst zuverlässig bestäubt werden.",
+  verdict:{q:"Welche Bestäubung ist dafür besser geeignet?",a:["Tierbestäubung","Windbestäubung"],c:0},
+  reason:{q:"Wähle die passenden Begründungen:",a:[
+    "Tiere fliegen gezielt von Blüte zu Blüte – die Bestäubung ist treffsicher",
+    "Blüten locken Bestäuber mit Farbe, Duft und Nektar gezielt an",
+    "Beim Wind geht weniger Pollen verloren als bei Tieren",
+    "Windbestäubung ist treffsicherer als Tierbestäubung"],correct:[0,1]},
+  tip:"Wer trägt den Pollen zielgerichtet – Wind oder Tier?",erkl:"Tierbestäubung ist zuverlässiger: Tiere tragen den Pollen gezielt von Blüte zu Blüte und werden durch Farbe, Duft und Nektar angelockt. Windbestäubung verliert viel Pollen und ist wenig treffsicher."},
 
 /* ============ WELT 2: Tierreich ============ */
 {w:2,ab:1,type:"sort",op:"Zuordnen",q:"Ordne die Merkmale der richtigen Wirbeltierklasse zu.",cats:["Fische","Vögel"],items:[{t:"Kiemenatmung",cat:0},{t:"Knochenschuppen",cat:0},{t:"Laich im Wasser",cat:0},{t:"Federn",cat:1},{t:"Lungenatmung",cat:1},{t:"hartschalige Eier",cat:1}],tip:"Wer lebt im Wasser, wer kann fliegen?",erkl:"Fische: Kiemen, Knochenschuppen, Laich. Vögel: Federn, Lungen, hartschalige Eier."},
@@ -341,10 +355,19 @@ const Q = [
   tip:"regulieren = selbst steuern.",erkl:"Thermoregulatorische (gleichwarme) Tiere – Vögel und Säugetiere – halten ihre Körpertemperatur selbst konstant, auch bei Kälte."},
 {w:2,ab:2,type:"mc",op:"Erklären",q:"Erkläre, warum eine Kaulquappe Kiemen, ein erwachsener Frosch aber Lungen hat.",a:["Die Kaulquappe lebt im Wasser (Kiemen); nach der Metamorphose lebt der Frosch an Land und atmet über Lunge und Haut","Frösche atmen immer über Kiemen","Kaulquappen haben schon Lungen","Der Frosch atmet über Federn"],c:0,tip:"Lebensraum-Wechsel von Wasser zu Land.",erkl:"Im Wasser nutzt die Kaulquappe Kiemen. Bei der Metamorphose wird sie zum Landtier und atmet über Lungen und Haut."},
 {w:2,ab:2,type:"mc",op:"Erklären",q:"Erkläre, warum Reptilien Hornschuppen besitzen.",a:["Die Hornschuppen schützen vor Austrocknung und ermöglichen so das Leben an Land","Hornschuppen helfen beim Schwimmen","Hornschuppen dienen der Photosynthese","Hornschuppen halten die Eier feucht"],c:0,tip:"Was droht an Land ohne Schutz?",erkl:"Hornschuppen schützen Reptilien vor dem Austrocknen – dadurch können sie auch in trockenen Lebensräumen an Land leben."},
-{w:2,ab:3,type:"compare",op:"Vergleichen",q:"Vergleiche Amphibien und Reptilien.",left:"Nur Amphibien",right:"Nur Reptilien",items:[{t:"feuchte Haut mit Schleim",cat:0},{t:"Laich im Wasser",cat:0},{t:"Hornschuppen",cat:2},{t:"weichschalige Eier an Land",cat:2},{t:"Wirbeltiere",cat:1},{t:"thermokonform (wechselwarm)",cat:1}],
-  midLabel:"Beides",boss:true,tip:"Beide sind wechselwarme Wirbeltiere – die Haut und die Eier unterscheiden sie.",erkl:"Amphibien: feuchte Haut, Laich im Wasser. Reptilien: Hornschuppen, Eier an Land. Beide sind wechselwarme Wirbeltiere."},
-{w:2,ab:3,type:"compare",op:"Vergleichen",q:"Vergleiche Fische und Säugetiere.",left:"Nur Fische",right:"Nur Säugetiere",items:[{t:"Kiemenatmung",cat:0},{t:"Knochenschuppen",cat:0},{t:"Milchdrüsen",cat:2},{t:"Haare / Fell",cat:2},{t:"Wirbeltiere",cat:1},{t:"haben ein Skelett",cat:1}],
-  midLabel:"Beides",boss:true,tip:"Wie atmen sie, wie versorgen sie den Nachwuchs?",erkl:"Fische: Kiemen, Knochenschuppen, wechselwarm. Säugetiere: Lungen, Fell, Milchdrüsen, gleichwarm. Beide sind Wirbeltiere mit Skelett."},
+{w:2,ab:3,type:"judge",op:"Beurteilen",boss:true,q:"Beurteile eine Fischhaltung.",
+  scenario:"In einem Geschäft werden Goldfische in einem kleinen Glas ohne Pflanzen und ohne Pumpe gehalten.",
+  verdict:{q:"Ist diese Haltung für Fische geeignet?",a:["Nein, nicht geeignet","Ja, gut geeignet"],c:0},
+  reason:{q:"Wähle die passenden Begründungen:",a:[
+    "Fische atmen über Kiemen den im Wasser gelösten Sauerstoff – im kleinen Glas wird er knapp",
+    "Fische brauchen genügend Wasser und Sauerstoff zum Leben",
+    "Fische atmen über Lungen und holen an der Oberfläche Luft",
+    "Fische sind gleichwarm und heizen ihr Wasser selbst"],correct:[0,1]},
+  tip:"Womit atmen Fische, und woher kommt ihr Sauerstoff?",erkl:"Fische atmen über Kiemen den im Wasser gelösten Sauerstoff. In einem kleinen Glas ohne Pumpe wird der Sauerstoff knapp – die Haltung ist nicht artgerecht."},
+{w:2,ab:2,type:"explain",op:"Erklären",q:"Erkläre, warum ein Fisch an Land erstickt.",claim:"Ein Fisch an Land schnappt nach Luft und stirbt bald.",parts:[
+  {q:"Begründung – warum?",a:["Seine Kiemen funktionieren nur im Wasser und fallen an der Luft zusammen","Fische haben gar keine Atmungsorgane","An Land gibt es überhaupt keinen Sauerstoff"],c:0},
+  {q:"Wie atmen Fische im Wasser?",a:["Über Kiemen nehmen sie den gelösten Sauerstoff auf","Über Lungen wie der Mensch","Über ihre Schuppen"],c:0}],
+  tip:"Womit atmen Fische – und wo klappt das nur?",erkl:"Fische atmen über Kiemen den im Wasser gelösten Sauerstoff. An der Luft fallen die Kiemen zusammen und können keinen Sauerstoff mehr aufnehmen – der Fisch erstickt."},
 
 /* ============ WELT 3: Stoffe & Labor ============ */
 {w:3,ab:1,type:"sort",op:"Zuordnen",q:"Ordne jedes Laborgerät seiner Funktion zu.",cats:["Messen","Betrachten","Erhitzen"],items:[{t:"Messzylinder",cat:0},{t:"Waage",cat:0},{t:"Thermometer",cat:0},{t:"Lupe",cat:1},{t:"Lichtmikroskop",cat:1},{t:"Gasbrenner",cat:2}],tip:"Womit misst man, womit schaut man, womit macht man heiß?",erkl:"Messen: Messzylinder (Volumen), Waage (Masse), Thermometer (Temperatur). Betrachten: Lupe, Mikroskop. Erhitzen: Gasbrenner."},
@@ -367,8 +390,15 @@ const Q = [
   {q:"Was zeigt ein durchscheinender, bleibender Fleck?",a:["Dass Fett enthalten ist","Dass Stärke enthalten ist","Dass Sauerstoff enthalten ist"],c:0},
   {q:"Wie unterscheidet sich der Fleck von einem Wasserfleck?",a:["Er bleibt dauerhaft und macht das Papier durchscheinend","Er trocknet vollständig weg","Er färbt das Papier blau-violett"],c:0}],
   tip:"Fett hinterlässt bleibende Spuren.",erkl:"Fett hinterlässt auf Papier einen dauerhaften, durchscheinenden Fleck – anders als Wasser, das wegtrocknet. Das ist die Fettfleckprobe."},
-{w:3,ab:3,type:"compare",op:"Vergleichen",q:"Vergleiche die Glimmspanprobe und die Kalkwasserprobe.",left:"Nur Glimmspanprobe",right:"Nur Kalkwasserprobe",items:[{t:"weist Sauerstoff nach",cat:0},{t:"Span flammt auf",cat:0},{t:"weist Kohlenstoffdioxid nach",cat:2},{t:"Flüssigkeit trübt sich",cat:2},{t:"ist ein Gasnachweis",cat:1},{t:"man beobachtet eine Veränderung",cat:1}],
-  midLabel:"Beides",boss:true,tip:"Beide weisen ein Gas nach – aber ein anderes und mit anderem Effekt.",erkl:"Glimmspanprobe: Sauerstoff (Span flammt auf). Kalkwasserprobe: Kohlenstoffdioxid (Trübung). Beide sind Gasnachweise mit beobachtbarer Veränderung."},
+{w:3,ab:3,type:"judge",op:"Entscheiden",boss:true,q:"Entscheide dich für das passende Messgerät.",
+  scenario:"Du sollst für ein Experiment genau 50 ml Wasser abmessen. Zur Wahl stehen ein Becherglas mit groben Strichen und ein Messzylinder mit feiner Skala.",
+  verdict:{q:"Welches Gerät wählst du?",a:["Messzylinder","Becherglas"],c:0},
+  reason:{q:"Wähle die passenden Begründungen:",a:[
+    "Der Messzylinder hat eine feine Skala und misst das Volumen genau",
+    "Genaues Abmessen macht das Experiment vergleichbar und zuverlässig",
+    "Das Becherglas misst Volumen genauer als der Messzylinder",
+    "Volumen misst man am besten mit der Waage"],correct:[0,1]},
+  tip:"Welches Gerät hat die genauere Skala?",erkl:"Zum genauen Abmessen eines Volumens nimmt man den Messzylinder mit feiner Skala. Das Becherglas hat nur grobe Marken. Genaues Messen macht Versuche verlässlich und vergleichbar."},
 
 /* ============ WELT 4: Forscher & Code ============ */
 {w:4,ab:1,type:"order",op:"Ordnen",q:"Ordne die Schritte einer naturwissenschaftlichen Untersuchung.",items:["Phänomen","Hypothese","Planung","Durchführung","Beobachtung","Folgerung"],tip:"Erst beobachten und vermuten, ganz am Ende folgern.",erkl:"Ablauf: Phänomen → Hypothese → Planung → Durchführung → Beobachtung → Folgerung."},
@@ -387,12 +417,24 @@ const Q = [
   tip:"Attribut = Eigenschaft, danach steht ihr Wert.",erkl:"Ein Attribut ist eine Eigenschaft eines Objekts. In rechteck1.füllfarbe = grün ist 'füllfarbe' das Attribut und 'grün' sein Wert."},
 {w:4,ab:2,type:"mc",op:"Erklären",q:"Erkläre, was eine Klasse ist und wie sie mit Objekten zusammenhängt.",a:["Eine Klasse ist die Vorlage; nach ihr werden gleichartige Objekte erzeugt (z. B. rechteck1 nach RECHTECK)","Eine Klasse ist ein einzelnes Objekt","Eine Klasse ist ein Attributwert","Eine Klasse ist eine Methode"],c:0,tip:"Vorlage und danach gebaute Exemplare.",erkl:"Eine Klasse (z. B. RECHTECK) ist die Vorlage. Konkrete Objekte wie rechteck1 werden nach dieser Vorlage erzeugt und haben eigene Attributwerte."},
 {w:4,ab:2,type:"mc",op:"Erklären",q:"Erkläre, warum die Aussage „Ich kaufe lieber Eier aus Freilandhaltung, weil mir Tierwohl wichtig ist“ eine bewertende Aussage ist.",a:["Weil sie eine persönliche Meinung ausdrückt und sich auf Werte bezieht","Weil sie eine messbare Tatsache nennt","Weil sie eine Hypothese ist","Weil sie eine Frage stellt"],c:0,tip:"Steckt da eine Meinung drin?",erkl:"Bewertende Aussagen geben eine persönliche Meinung wieder und beziehen sich auf Werte – im Gegensatz zu beschreibenden, überprüfbaren Aussagen."},
-{w:4,ab:2,type:"explain",op:"Erklären",q:"Erkläre, warum man Messwerte über die Zeit in einem Liniendiagramm darstellt.",claim:"Du misst jede Stunde die Temperatur im Klassenzimmer.",parts:[
-  {q:"Warum eignet sich ein Liniendiagramm?",a:["Weil es den Verlauf der Werte über die Zeit anschaulich verbindet","Weil es bunter ist","Weil man dann nicht messen muss"],c:0},
-  {q:"Wofür eignet sich dagegen ein Säulendiagramm besser?",a:["Für den Vergleich einzelner Kategorien","Für Verläufe über die Zeit","Für Punktnotation"],c:0}],
-  tip:"Verläufe verbindet man, einzelne Werte stellt man nebeneinander.",erkl:"Ein Liniendiagramm zeigt den Verlauf über die Zeit. Ein Säulendiagramm eignet sich für den Vergleich einzelner Werte/Kategorien."},
-{w:4,ab:3,type:"compare",op:"Vergleichen",q:"Vergleiche beschreibende und bewertende Aussagen.",left:"Beschreibend",right:"Bewertend",items:[{t:"nennt einen überprüfbaren Sachverhalt",cat:0},{t:"„Ein Huhn hat im Auslauf 4 m² Platz.“",cat:0},{t:"drückt eine persönliche Meinung aus",cat:2},{t:"„Freilandhaltung ist besser.“",cat:2},{t:"ist eine Aussage über Hühnerhaltung",cat:1},{t:"steht in einem Satz",cat:1}],
-  midLabel:"Beides",boss:true,tip:"Lässt sich die Aussage nachprüfen oder ist sie Meinung?",erkl:"Beschreibende Aussagen nennen überprüfbare Sachverhalte; bewertende Aussagen drücken eine persönliche Meinung aus. Beide sind hier Aussagen zum selben Thema."}
+{w:4,ab:3,type:"judge",op:"Beurteilen",boss:true,q:"Beurteile die Planung eines Experiments.",
+  scenario:"Ein Schüler will testen, ob Licht das Pflanzenwachstum beeinflusst. Er stellt eine Pflanze ans helle Fenster und gießt sie viel; die andere stellt er in den dunklen Schrank und gießt sie wenig.",
+  verdict:{q:"Ist dieser Versuch gut geplant?",a:["Nein, so taugt der Versuch nicht","Ja, der Versuch ist gut geplant"],c:0},
+  reason:{q:"Wähle die passenden Begründungen:",a:[
+    "Es wurden zwei Größen gleichzeitig verändert: Licht UND Wassermenge",
+    "Man kann nicht erkennen, ob das Licht oder das Wasser gewirkt hat",
+    "Alle Bedingungen außer dem Licht wurden konstant gehalten",
+    "Es ist gut, möglichst viele Größen gleichzeitig zu verändern"],correct:[0,1]},
+  tip:"Wie viele Größen dürfen sich ändern, wenn man eine Wirkung untersucht?",erkl:"Der Versuch taugt nicht: Licht und Wassermenge wurden gleichzeitig verändert. So bleibt unklar, welche Größe gewirkt hat. Richtig wäre, nur das Licht (unabhängige Variable) zu ändern und alles andere konstant zu halten."},
+{w:4,ab:3,type:"judge",op:"Bewerten",boss:true,q:"Bewerte zwei Programmier-Lösungen (Informatik).",
+  scenario:"Zwei Kinder bewegen dasselbe Rechteck-Objekt. Code A ändert ständig direkt die Attribute länge und breite. Code B setzt die Größe einmal und nutzt danach Methoden wie drehenUm(...) und verschiebenUm(...).",
+  verdict:{q:"Welcher Code ist übersichtlicher und weniger fehleranfällig?",a:["Code B","Code A"],c:0},
+  reason:{q:"Wähle die passenden Begründungen:",a:[
+    "Code B nutzt passende Methoden für Aktionen, statt ständig Attribute zu überschreiben",
+    "Bei Code B sieht man klar, welche Aktion das Objekt ausführt",
+    "Code A ist übersichtlicher, weil er Attribute oft direkt ändert",
+    "Methoden machen einen Code grundsätzlich unübersichtlich"],correct:[0,1]},
+  tip:"Denke an Objekt, Attribut und Methode – was beschreibt eine Aktion?",erkl:"Code B ist klarer: Aktionen werden über passende Methoden (drehenUm, verschiebenUm) ausgeführt, statt ständig die Attribute länge und breite zu überschreiben. Das ist übersichtlicher und weniger fehleranfällig."}
 ];
 
 const ACHIEVEMENTS = [
@@ -477,6 +519,11 @@ function prepTask(src){
     q.items=src.items.map((it,k)=>({t:it.t,cat:it.cat,id:k})); shuffle(q.items);
   } else if(q.type==="label"){
     q.pool = src.slots.map(s=>s.term); shuffle(q.pool);
+  } else if(q.type==="judge"){
+    const v=src.verdict, vi=v.a.map((_,k)=>k); shuffle(vi);
+    q.verdict={q:v.q, a:vi.map(k=>v.a[k]), c:vi.indexOf(v.c)};
+    const r=src.reason, ri=r.a.map((_,k)=>k); shuffle(ri);
+    q.reason={q:r.q, a:ri.map(k=>r.a[k]), correct:r.correct.map(ci=>ri.indexOf(ci))};
   }
   return q;
 }
@@ -495,9 +542,10 @@ const OPDESC={mc:"Tippe die richtige Antwort an.",
   sort:"Tippe eine Karte an und danach die passende Gruppe.",
   compare:"Tippe eine Karte an und danach das passende Feld (nur links, beides oder nur rechts).",
   label:"Tippe einen Begriff an und danach die passende Nummer im Schaubild.",
-  explain:"Beantworte beide Teilfragen – Begründung und Beispiel."};
+  explain:"Beantworte beide Teilfragen – Begründung und Beispiel.",
+  judge:"Triff zuerst eine Entscheidung und wähle dann alle passenden Begründungen aus."};
 function renderQ(){
-  G.answered=false; G.used={}; G.sel=null; G.selTerm=null; G.assign={}; G.seq=[]; G.picks=[]; G.mcPick=null;
+  G.answered=false; G.used={}; G.sel=null; G.selTerm=null; G.assign={}; G.seq=[]; G.picks=[]; G.mcPick=null; G.jVerdict=null; G.jReasons=[];
   const q=G.qs[G.i];
   document.getElementById("qIdx").textContent=G.i+1;
   document.getElementById("qTot").textContent=G.qs.length;
@@ -511,7 +559,8 @@ function renderQ(){
   if(q.type==="order") renderOrder(q,ans); else
   if(q.type==="sort"||q.type==="compare") renderBuckets(q,ans); else
   if(q.type==="label") renderLabel(q,ans); else
-  if(q.type==="explain") renderExplain(q,ans);
+  if(q.type==="explain") renderExplain(q,ans); else
+  if(q.type==="judge") renderJudge(q,ans);
   document.getElementById("checkRow").classList.toggle("hidden", q.type==="mc");
   document.getElementById("qFb").classList.add("hidden");
   document.getElementById("nextRow").classList.add("hidden");
@@ -643,13 +692,44 @@ function renderExplain(q,ans){
 }
 function checkExplain(q){ let ok=0; q.parts.forEach((p,pi)=>{ if(G.picks[pi]===p.c) ok++; }); return ok/q.parts.length; }
 
+/* ---- Renderer: Beurteilen / Bewerten / Entscheiden (Urteil + Begründung) ---- */
+function renderJudge(q,ans){
+  if(q.scenario){ const sc=document.createElement("div"); sc.className="claim"; sc.textContent=q.scenario; ans.appendChild(sc); }
+  const vp=document.createElement("div"); vp.className="epart";
+  const vq=document.createElement("div"); vq.className="pq"; vq.textContent="1. "+q.verdict.q; vp.appendChild(vq);
+  q.verdict.a.forEach((opt,k)=>{
+    const b=document.createElement("button"); b.className="opt"; b.textContent=opt;
+    if(G.answered){ if(k===q.verdict.c) b.classList.add("correct"); else if(G.jVerdict===k) b.classList.add("wrong"); }
+    else { if(G.jVerdict===k) b.classList.add("sel"); b.onclick=()=>{ G.jVerdict=k; renderQ_keep(); }; }
+    vp.appendChild(b);
+  });
+  ans.appendChild(vp);
+  const rp=document.createElement("div"); rp.className="epart";
+  const rq=document.createElement("div"); rq.className="pq"; rq.textContent="2. "+q.reason.q; rp.appendChild(rq);
+  const hint=document.createElement("div"); hint.className="hint"; hint.textContent="Mehrfachauswahl – tippe alle passenden Begründungen an."; rp.appendChild(hint);
+  q.reason.a.forEach((opt,k)=>{
+    const b=document.createElement("button"); b.className="opt"; b.textContent=opt;
+    const sel=G.jReasons.includes(k);
+    if(G.answered){ if(q.reason.correct.includes(k)) b.classList.add("correct"); else if(sel) b.classList.add("wrong"); }
+    else { if(sel) b.classList.add("sel"); b.onclick=()=>{ const i=G.jReasons.indexOf(k); if(i<0) G.jReasons.push(k); else G.jReasons.splice(i,1); renderQ_keep(); }; }
+    rp.appendChild(b);
+  });
+  ans.appendChild(rp);
+}
+function checkJudge(q){
+  const vOK=G.jVerdict===q.verdict.c;
+  let rMatch=0; q.reason.a.forEach((_,k)=>{ if(q.reason.correct.includes(k)===G.jReasons.includes(k)) rMatch++; });
+  return 0.5*(vOK?1:0) + 0.5*(rMatch/q.reason.a.length);
+}
+
 /* re-render aktueller Aufgabe ohne Statusreset (für Zwischenschritte) */
 function renderQ_keep(){
   const q=G.qs[G.i]; const ans=document.getElementById("qAns"); ans.innerHTML="";
   if(q.type==="order") renderOrder(q,ans); else
   if(q.type==="sort"||q.type==="compare") renderBuckets(q,ans); else
   if(q.type==="label") renderLabel(q,ans); else
-  if(q.type==="explain") renderExplain(q,ans);
+  if(q.type==="explain") renderExplain(q,ans); else
+  if(q.type==="judge") renderJudge(q,ans);
   updateCheck();
 }
 /* zeigt die Lösung an (nach dem Prüfen, mit G.answered === true) */
@@ -659,13 +739,15 @@ function revealTask(q){
   if(q.type==="order") renderOrder(q,ans); else
   if(q.type==="sort"||q.type==="compare") renderBuckets(q,ans); else
   if(q.type==="label") renderLabel(q,ans); else
-  if(q.type==="explain") renderExplain(q,ans);
+  if(q.type==="explain") renderExplain(q,ans); else
+  if(q.type==="judge") renderJudge(q,ans);
 }
 function complete(q){
   if(q.type==="order") return G.seq.length===q.items.length;
   if(q.type==="sort"||q.type==="compare") return Object.keys(G.assign).length===q.items.length;
   if(q.type==="label") return Object.keys(G.assign).length===q.slots.length;
   if(q.type==="explain") return q.parts.every((_,i)=>G.picks[i]!=null);
+  if(q.type==="judge") return G.jVerdict!=null && G.jReasons.length>=1;
   return false;
 }
 function updateCheck(){ const b=document.getElementById("checkBtn"); if(b) b.disabled=!complete(G.qs[G.i]); }
@@ -678,6 +760,7 @@ function checkTask(){
   else if(q.type==="sort"||q.type==="compare") frac=checkBuckets(q);
   else if(q.type==="label") frac=checkLabel(q);
   else if(q.type==="explain") frac=checkExplain(q);
+  else if(q.type==="judge") frac=checkJudge(q);
   resolve(frac>=0.999, frac, q);
 }
 
