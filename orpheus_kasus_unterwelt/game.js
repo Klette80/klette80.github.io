@@ -644,6 +644,28 @@ const ENDINGS = {
 
 const ENDING_ORDER = ["ovid", "echoes", "light", "solitary"];
 const ENDING_ARCHIVE_KEY = "orpheus-schicksalsarchiv-v1";
+const PROFILE_KEY = "orpheus-profil-v1";
+
+// Bardenstufen: Rang ergibt sich aus der gesammelten Gesamt-XP über alle Läufe.
+const BARD_RANKS = [
+  { xp: 0, name: "Stummer Wanderer" },
+  { xp: 1500, name: "Saitenschüler" },
+  { xp: 4000, name: "Leierspieler" },
+  { xp: 8000, name: "Sänger der Schwelle" },
+  { xp: 14000, name: "Stimme der Schatten" },
+  { xp: 22000, name: "Orphischer Barde" },
+  { xp: 34000, name: "Bezwinger des Hades" }
+];
+
+// Combo-Stufen: ab welcher Serie welcher Punkte-Multiplikator greift.
+// Gleichmäßige Schritte halten den Sog aufrecht, ohne früh zu sättigen.
+const COMBO_TIERS = [
+  { streak: 12, mult: 5 },
+  { streak: 9, mult: 4 },
+  { streak: 6, mult: 3 },
+  { streak: 3, mult: 2 }
+];
+const BASE_POINTS = { task: 100, boss: 150, ascent: 130, quest: 90 };
 
 const CUTSCENE_CHARACTERS = {
   orpheus: {
@@ -744,6 +766,14 @@ const state = {
   hp: 5,
   mana: 3,
   streak: 0,
+  score: 0,
+  comboMax: 0,
+  runCorrect: 0,
+  runTotal: 0,
+  continuesLeft: 2,
+  levelStars: {},
+  levelDamage: {},
+  dailyMode: false,
   rescueTarget: null,
   rescueStreak: 0,
   grace: false,
@@ -794,7 +824,10 @@ const state = {
   ascentTimer: null,
   ascentLocked: false,
   currentEnding: null,
-  unlockedEndings: loadEndingArchive()
+  unlockedEndings: loadEndingArchive(),
+  profile: loadProfile(),
+  muted: false,
+  scoreBanked: false
 };
 
 const cutsceneRuntime = {
@@ -811,6 +844,14 @@ const el = {
   streakMeter: document.querySelector("#streakMeter"),
   streakLabel: document.querySelector("#streakLabel"),
   streakValue: document.querySelector("#streakValue"),
+  scoreMeter: document.querySelector("#scoreMeter"),
+  scoreValue: document.querySelector("#scoreValue"),
+  muteButton: document.querySelector("#muteButton"),
+  fxLayer: document.querySelector("#fxLayer"),
+  profileSummary: document.querySelector("#profileSummary"),
+  dailyButton: document.querySelector("#dailyButton"),
+  dailyHint: document.querySelector("#dailyHint"),
+  leaderboardPanel: document.querySelector("#leaderboardPanel"),
   realmKicker: document.querySelector("#realmKicker"),
   realmTitle: document.querySelector("#realmTitle"),
   realmLore: document.querySelector("#realmLore"),
@@ -939,6 +980,7 @@ const el = {
   gameOverReason: document.querySelector("#gameOverReason"),
   gameOverProgress: document.querySelector("#gameOverProgress"),
   gameOverRestart: document.querySelector("#gameOverRestart"),
+  continueButton: document.querySelector("#continueButton"),
   restartButton: document.querySelector("#restartButton"),
   nextButton: document.querySelector("#nextButton"),
   tableDialog: document.querySelector("#tableDialog"),
@@ -981,30 +1023,45 @@ function refreshVocabularyTasks() {
 function buildVocabularyTasks(levelIndex, count, allowedTypes) {
   const vocabulary = window.LATIN_VOCABULARY;
   const pool = vocabulary.nouns.filter((entry) => allowedTypes.includes(entry.type));
+
+  // Alle möglichen Form-Aufgaben sammeln und nach Fehlerquote gewichten.
+  const candidates = [];
+  pool.forEach((entry) => {
+    const forms = vocabulary.formsFor(entry);
+    Object.keys(forms)
+      .filter((key) => !["nom_sg", "gen_sg"].includes(key))
+      .forEach((key) => {
+        candidates.push({
+          entry,
+          key,
+          forms,
+          weight: formWeight(entry.type, key),
+          signature: `${entry.nom}:${key}`
+        });
+      });
+  });
+
   const generated = [];
   const used = new Set();
   let attempts = 0;
+  const maxAttempts = count * 40;
 
-  while (generated.length < count && attempts < count * 30) {
+  while (generated.length < count && attempts < maxAttempts && candidates.length) {
     attempts += 1;
-    const entry = pool[Math.floor(Math.random() * pool.length)];
-    const forms = vocabulary.formsFor(entry);
-    const keys = Object.keys(forms).filter((key) => !["nom_sg", "gen_sg"].includes(key));
-    const key = keys[Math.floor(Math.random() * keys.length)];
-    const signature = `${entry.nom}:${key}`;
-    if (used.has(signature)) continue;
-    used.add(signature);
+    const pick = weightedPick(candidates);
+    if (used.has(pick.signature)) continue;
+    used.add(pick.signature);
 
-    const answer = forms[key];
-    const label = vocabulary.labels[key];
+    const answer = pick.forms[pick.key];
+    const label = vocabulary.labels[pick.key];
     const choiceLimit = [6, 4, 2, 0, 0][levelIndex];
-    const choices = generated.length < choiceLimit ? buildFormChoices(entry, key, answer, pool) : null;
+    const choices = generated.length < choiceLimit ? buildFormChoices(pick.entry, pick.key, answer, pool) : null;
     generated.push(task(
-      `${choices ? "Bilde" : "Tippe"} den ${label} von ${entry.nom}, ${entry.gen}.`,
+      `${choices ? "Bilde" : "Tippe"} den ${label} von ${pick.entry.nom}, ${pick.entry.gen}.`,
       answer,
       choices,
       "",
-      { noun: entry.nom, nounType: entry.type, formKey: key, translation: entry.deutsch }
+      { noun: pick.entry.nom, nounType: pick.entry.type, formKey: pick.key, translation: pick.entry.deutsch }
     ));
   }
 
@@ -1154,6 +1211,7 @@ function render() {
   el.realmTitle.textContent = level.title;
   el.realmLore.textContent = level.lore;
   renderStreak();
+  renderScore();
   el.manaBar.style.width = `${(state.mana / 3) * 100}%`;
 
   renderHp();
@@ -1541,18 +1599,33 @@ function renderBoss() {
     activeEffects.push(`${shieldSource}: Ein falscher Klang wird abgefangen`);
   }
   el.bossHint.textContent = activeEffects.length
-    ? `${activeEffects.join(" · ")}. Die Hilfszauber bleiben im Bosskampf gesperrt.`
-    : "Klicke die richtige Endung, bevor die Zeit endet. Die Hilfszauber sind im Bosskampf gesperrt.";
+    ? `${activeEffects.join(" · ")}. Triff die richtige Endung genau auf der Leuchtlinie für „Perfekt".`
+    : "Triff die richtige Endung genau dann, wenn sie die Leuchtlinie kreuzt: „Perfekt“ gibt Bonuspunkte. Hilfszauber sind gesperrt.";
 
-  el.noteSheet.innerHTML = shuffleOptions(current.options).map((option, index) => `
+  const notes = shuffleOptions(current.options).map((option, index) => `
     <button class="note-hit note-speed-${state.levelIndex}" style="--lane:${index}; --delay:${index * 0.42}s" type="button" data-ending="${option}">
       <span>${option}</span>
     </button>
   `).join("");
+  el.noteSheet.innerHTML = `<div class="hit-line" aria-hidden="true"></div><div class="hit-zone" aria-hidden="true"></div>${notes}`;
 
   el.noteSheet.querySelectorAll(".note-hit").forEach((button) => {
     button.addEventListener("click", () => answerBoss(button.dataset.ending, button));
   });
+}
+
+// Timing-Bewertung: Wie nah war die getroffene Note an der Trefferlinie?
+// Gibt einen Bonus 0..0.6 zurück; ein zentraler Treffer gilt als "Perfekt".
+function bossTimingBonus(button) {
+  const line = el.noteSheet.querySelector(".hit-line");
+  if (!line || !button) return 0;
+  const lineRect = line.getBoundingClientRect();
+  const noteRect = button.getBoundingClientRect();
+  const lineX = lineRect.left + lineRect.width / 2;
+  const noteX = noteRect.left + noteRect.width / 2;
+  const tolerance = Math.max(120, el.noteSheet.getBoundingClientRect().width * 0.32);
+  const accuracy = Math.max(0, 1 - Math.abs(noteX - lineX) / tolerance);
+  return accuracy * 0.6;
 }
 
 function sideQuestForCompletedLevel(levelIndex) {
@@ -1879,6 +1952,7 @@ function answerSideQuest(value, selectedButton) {
     state.questScore += 1;
     state.questPressure = Math.max(0, state.questPressure - 8);
     registerCorrectAnswer();
+    awardPoints("quest", selectedButton);
     el.questFeedback.className = "feedback good";
     const successMessages = {
       sisyphus: `Die Endung ${round.answer} hält den Stein einen Augenblick auf.`,
@@ -2045,12 +2119,19 @@ function renderHp() {
 }
 
 function renderLevelMap() {
-  el.levelMap.innerHTML = levels.map((level, index) => `
+  el.levelMap.innerHTML = levels.map((level, index) => {
+    const stars = state.levelStars[index] || 0;
+    const starRow = stars > 0
+      ? `<span class="level-stars">${"★".repeat(stars)}${"☆".repeat(3 - stars)}</span>`
+      : "";
+    return `
     <div class="level-node ${index === state.levelIndex ? "active" : ""} ${index < state.levelIndex ? "done" : ""}">
       <strong>${index + 1}. ${level.title}</strong>
       <span>${level.trainingLabel || level.declension}</span>
+      ${starRow}
     </div>
-  `).join("");
+  `;
+  }).join("");
 }
 
 function renderAnswers(current) {
@@ -2086,6 +2167,7 @@ function answerTask(value, button = null) {
   if (state.locked || state.defeated || state.phase !== "task") return;
   const current = currentTask();
   const correct = normalize(value) === normalize(current.answer);
+  recordFormResult(current.nounType, current.formKey, correct);
   state.locked = true;
   state.consequenceMessage = "";
 
@@ -2096,9 +2178,12 @@ function answerTask(value, button = null) {
     }
   });
 
+  state.runTotal += 1;
   if (correct) {
+    state.runCorrect += 1;
     if (button) button.classList.add("correct");
     const rescued = registerCorrectAnswer();
+    awardPoints("task", button);
     state.mana = Math.min(3, state.mana + (state.streak >= 3 ? 1 : 0));
     el.feedback.className = "feedback good";
     el.feedback.textContent = rescued
@@ -2121,13 +2206,18 @@ function answerBoss(value, button) {
   const correct = normalize(value) === normalize(current.answer);
 
   button.classList.add(correct ? "correct" : "wrong");
+  state.runTotal += 1;
   if (correct) {
+    state.runCorrect += 1;
     state.bossScore += 1;
     const rescued = registerCorrectAnswer();
+    const timingBonus = bossTimingBonus(button);
+    awardPoints("boss", button, timingBonus);
+    const timingLabel = timingBonus >= 0.5 ? "Perfekt im Takt" : timingBonus >= 0.25 ? "Gut getroffen" : "Im letzten Moment";
     el.feedback.className = "feedback good";
     el.feedback.textContent = rescued
-      ? `Getroffen: ${current.answer}. Der Schicksalsakkord schenkt Orpheus einen Lebenspunkt.`
-      : `Getroffen: ${current.answer}. Die Melodie zwingt ${currentLevel().enemy} zurück.`;
+      ? `${timingLabel}: ${current.answer}. Der Schicksalsakkord schenkt Orpheus einen Lebenspunkt.`
+      : `${timingLabel}: ${current.answer}. Die Melodie zwingt ${currentLevel().enemy} zurück.`;
     appendRescueProgress();
   } else {
     if (state.activeBossShield > 0) {
@@ -2176,8 +2266,9 @@ function finishBoss(timedOut = false) {
       timeLeft: state.bossTimeLeft
     };
     state.unlockedCodex.add(currentLevel().id);
+    const stars = awardLevelStars();
     el.feedback.className = "feedback good";
-    el.feedback.textContent = `Boss bezwungen: ${state.bossScore}/${currentLevel().boss.notes.length} Klänge getroffen. Ein neuer Mythos-Eintrag ist frei.`;
+    el.feedback.textContent = `Boss bezwungen: ${state.bossScore}/${currentLevel().boss.notes.length} Klänge · ${"★".repeat(stars)}${"☆".repeat(3 - stars)}. Ein neuer Mythos-Eintrag ist frei.`;
   } else {
     breakAnswerStreak();
     loseLife();
@@ -2222,25 +2313,65 @@ function lose(message) {
   state.locked = true;
   stopBossTimer();
   stopQuestTimer();
+  sfxLose();
+  const canContinue = state.continuesLeft > 0;
+  if (!canContinue) bankRunScore(false);
   el.feedback.className = "feedback bad";
   el.feedback.textContent = `${message} Starte neu und versuche, die Formen früher sicherer zu spielen.`;
   el.gameOverReason.textContent = message;
-  el.gameOverProgress.textContent = `${currentLevel().title} · Aufgabe ${Math.min(state.taskIndex + 1, currentLevel().tasks.length)} von ${currentLevel().tasks.length}`;
+  el.gameOverProgress.textContent = `${currentLevel().title} · ${state.score.toLocaleString("de-DE")} Punkte · längste Serie ${state.comboMax}`;
+  if (el.continueButton) {
+    el.continueButton.hidden = !canContinue;
+    el.continueButton.textContent = canContinue
+      ? `Weiterspielen ab ${currentLevel().title} (${state.continuesLeft} übrig, −${continuePenalty().toLocaleString("de-DE")} Punkte)`
+      : "Weiterspielen";
+  }
   el.gameOverOverlay.hidden = false;
   document.body.classList.add("game-over-active");
-  window.setTimeout(() => el.gameOverRestart.focus(), 50);
+  window.setTimeout(() => (canContinue ? el.continueButton : el.gameOverRestart).focus(), 50);
   updateFooter();
   updateSkills();
+}
+
+// Fortsetzungskosten: 20 % des Punktestands, mindestens 500. So bleibt die
+// Entscheidung sowohl bei niedrigem als auch bei hohem Score spürbar.
+function continuePenalty() {
+  return Math.max(500, Math.round(state.score * 0.2));
+}
+
+// Setzt den Lauf am Anfang des aktuellen Levels fort, statt alles zu verlieren.
+function continueRun() {
+  if (!state.defeated || state.continuesLeft <= 0) return;
+  state.continuesLeft -= 1;
+  state.score = Math.max(0, state.score - continuePenalty());
+  state.defeated = false;
+  state.hp = 3;
+  state.streak = 0;
+  state.rescueTarget = null;
+  state.rescueStreak = 0;
+  state.grace = false;
+  state.graceSource = "";
+  state.locked = false;
+  state.bossIndex = 0;
+  state.bossScore = 0;
+  state.hintsUsed = 0;
+  state.consequenceMessage = `Die Moiren gewähren eine Rückkehr: Orpheus beginnt ${currentLevel().title} mit drei Lebenspunkten erneut.`;
+  stopBossTimer();
+  el.gameOverOverlay.hidden = true;
+  document.body.classList.remove("game-over-active");
+  startLevel();
 }
 
 function shake() {
   document.body.classList.remove("shake");
   void document.body.offsetWidth;
   document.body.classList.add("shake");
+  sfxWrong();
 }
 
 function renderStatusOnly() {
   renderStreak();
+  renderScore();
   el.manaBar.style.width = `${(state.mana / 3) * 100}%`;
   renderHp();
   updateFooter();
@@ -2267,6 +2398,7 @@ function breakAnswerStreak() {
 }
 
 function loseLife() {
+  state.levelDamage[state.levelIndex] = (state.levelDamage[state.levelIndex] || 0) + 1;
   state.hp = Math.max(0, state.hp - 1);
   if (state.hp === 1) armRescueChallenge();
   if (state.hp === 0) {
@@ -2426,6 +2558,8 @@ function startBossTimer() {
     if (state.phase !== "boss" || state.locked || state.defeated) return;
     state.bossTimeLeft -= 1;
     el.bossTimer.textContent = `${state.bossTimeLeft}s`;
+    el.bossTimer.classList.toggle("urgent", state.bossTimeLeft <= 5);
+    if (state.bossTimeLeft <= 5 && state.bossTimeLeft > 0) sfxTick();
     if (state.bossTimeLeft <= 0) {
       finishBoss(true);
     }
@@ -2554,14 +2688,20 @@ function answerAscent(value, button) {
     if (normalize(choice.dataset.ascentAnswer) === normalize(round.answer)) choice.classList.add("correct");
   });
 
+  state.runTotal += 1;
   if (correct) {
+    state.runCorrect += 1;
     state.ascentScore += 1;
+    state.streak += 1;
+    awardPoints("ascent", button);
     button.classList.add("correct");
     el.ascentFeedback.className = "feedback good";
     el.ascentFeedback.textContent = `Der Schritt hält. ${round.answer} trägt die Melodie weiter.`;
   } else {
+    state.streak = 0;
     state.ascentMistakes += 1;
     state.ascentTimeLeft = Math.max(0, state.ascentTimeLeft - 2);
+    sfxWrong();
     button.classList.add("wrong");
     el.ascentFeedback.className = "feedback bad";
     el.ascentFeedback.textContent = `Der Zweifel flüstert. Richtig wäre ${round.answer}; zwei Sekunden verrinnen.`;
@@ -2614,6 +2754,8 @@ function resolveEnding() {
   state.currentEnding = chooseEnding();
   state.unlockedEndings.add(state.currentEnding);
   saveEndingArchive();
+  bankRunScore(true);
+  sfxWin();
   state.phase = "ending";
   state.locked = true;
   render();
@@ -2659,6 +2801,350 @@ function saveEndingArchive() {
   } catch {
     // Das Spiel bleibt auch ohne lokalen Speicher vollständig spielbar.
   }
+}
+
+// --- Persistentes Profil (übersteht Game Over und Neustart) -----------------
+
+function defaultProfile() {
+  return {
+    totalXp: 0,
+    bestScore: 0,
+    bestStreak: 0,
+    gamesPlayed: 0,
+    gamesWon: 0,
+    bestStars: {},
+    leaderboard: [],
+    daily: { date: "", best: 0 },
+    weakForms: {}
+  };
+}
+
+// --- Adaptive Wiederholung (Batch E) ----------------------------------------
+// Pro Deklinationsklasse + Kasus wird festgehalten, wie oft eine Form gesehen
+// und wie oft sie falsch beantwortet wurde. Schwächen tauchen dann häufiger auf.
+
+function formSignature(nounType, formKey) {
+  return `${nounType || "?"}|${formKey || "?"}`;
+}
+
+function recordFormResult(nounType, formKey, correct) {
+  if (!formKey) return;
+  const sig = formSignature(nounType, formKey);
+  const weak = state.profile.weakForms || (state.profile.weakForms = {});
+  const entry = weak[sig] || (weak[sig] = { seen: 0, wrong: 0 });
+  entry.seen += 1;
+  if (!correct) entry.wrong += 1;
+  saveProfile();
+}
+
+// Gewicht für die Auswahl: bewährte Formen 1.0, fehleranfällige bis ~5.0.
+function formWeight(nounType, formKey) {
+  if (state.dailyMode) return 1;
+  const weak = state.profile.weakForms || {};
+  const entry = weak[formSignature(nounType, formKey)];
+  if (!entry || entry.seen < 2) return 1;
+  return 1 + 4 * (entry.wrong / entry.seen);
+}
+
+function weightedPick(candidates) {
+  const total = candidates.reduce((sum, c) => sum + c.weight, 0);
+  let roll = Math.random() * total;
+  for (const candidate of candidates) {
+    roll -= candidate.weight;
+    if (roll <= 0) return candidate;
+  }
+  return candidates[candidates.length - 1];
+}
+
+// --- Sterne, Tagesherausforderung & Bestenliste (Batch F) -------------------
+
+// 1 Stern fürs Bestehen, +1 für perfekten Boss, +1 für ein Level ohne Schaden.
+function awardLevelStars() {
+  const level = currentLevel();
+  const total = level.boss.notes.length;
+  let stars = 1;
+  if (state.bossScore >= total) stars += 1;
+  if (!state.levelDamage[state.levelIndex]) stars += 1;
+  state.levelStars[state.levelIndex] = Math.max(state.levelStars[state.levelIndex] || 0, stars);
+  if (!state.dailyMode) {
+    const best = state.profile.bestStars || (state.profile.bestStars = {});
+    best[level.id] = Math.max(best[level.id] || 0, stars);
+    saveProfile();
+  }
+  return stars;
+}
+
+// Deterministischer Zufall, damit die Tagesherausforderung für alle gleich ist.
+function mulberry32(seed) {
+  return function () {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function todaySeed() {
+  const d = new Date();
+  return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+}
+
+const realRandom = Math.random.bind(Math);
+
+function startDailyChallenge() {
+  state.dailyMode = true;
+  Math.random = mulberry32(todaySeed());
+  state.difficulty = "legionary";
+  el.difficultyOverlay.hidden = true;
+  document.body.classList.remove("difficulty-active");
+  resetGame();
+}
+
+function endDailyMode() {
+  if (!state.dailyMode) return;
+  state.dailyMode = false;
+  Math.random = realRandom;
+}
+
+function loadProfile() {
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(PROFILE_KEY) || "null");
+    if (!stored || typeof stored !== "object") return defaultProfile();
+    return { ...defaultProfile(), ...stored };
+  } catch {
+    return defaultProfile();
+  }
+}
+
+function saveProfile() {
+  try {
+    window.localStorage.setItem(PROFILE_KEY, JSON.stringify(state.profile));
+  } catch {
+    // Ohne lokalen Speicher bleibt das Spiel spielbar, nur ohne Bestenwerte.
+  }
+}
+
+function rankForXp(xp) {
+  let current = BARD_RANKS[0];
+  let next = null;
+  for (let i = 0; i < BARD_RANKS.length; i += 1) {
+    if (xp >= BARD_RANKS[i].xp) {
+      current = BARD_RANKS[i];
+      next = BARD_RANKS[i + 1] || null;
+    }
+  }
+  return { current, next };
+}
+
+// Schreibt den Score eines Laufs einmalig ins Profil (bei Sieg oder Niederlage).
+function bankRunScore(won) {
+  if (state.scoreBanked || state.runTotal === 0) return;
+  state.scoreBanked = true;
+  const profile = state.profile;
+  profile.totalXp += state.score;
+  profile.gamesPlayed += 1;
+  if (won) profile.gamesWon += 1;
+  if (state.score > profile.bestScore) profile.bestScore = state.score;
+  if (state.comboMax > profile.bestStreak) profile.bestStreak = state.comboMax;
+  if (state.dailyMode) {
+    const today = new Date().toISOString().slice(0, 10);
+    if (!profile.daily || profile.daily.date !== today) profile.daily = { date: today, best: 0 };
+    if (state.score > profile.daily.best) profile.daily.best = state.score;
+  } else {
+    profile.leaderboard = [...(profile.leaderboard || []), {
+      score: state.score,
+      rank: DIFFICULTIES[state.difficulty]?.name || "?",
+      won,
+      date: new Date().toISOString().slice(0, 10)
+    }]
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
+  }
+  saveProfile();
+}
+
+// --- Combo & Punkte ---------------------------------------------------------
+
+function comboMultiplier() {
+  const tier = COMBO_TIERS.find((entry) => state.streak >= entry.streak);
+  return tier ? tier.mult : 1;
+}
+
+// Vergibt Punkte für eine richtige Antwort und löst die passende Belohnungs-
+// Animation aus. bonus (0..1) kommt z. B. aus dem Timing des Bosskampfs.
+function awardPoints(kind, anchor, bonus = 0) {
+  const mult = comboMultiplier();
+  const base = BASE_POINTS[kind] || 100;
+  const gained = Math.round(base * mult * (1 + bonus));
+  state.score += gained;
+  if (state.streak > state.comboMax) state.comboMax = state.streak;
+
+  const label = bonus >= 0.5 ? "PERFEKT" : mult > 1 ? `COMBO ×${mult}` : "";
+  spawnFloatingText(`+${gained}${label ? ` · ${label}` : ""}`, mult >= 3 ? "great" : "good", anchor);
+  pulseScore();
+  sfxCorrect(state.streak, bonus);
+  if (mult >= 2 && state.streak === COMBO_TIERS.find((t) => t.mult === mult)?.streak) {
+    flashCombo(mult);
+  }
+  return gained;
+}
+
+function renderScore() {
+  if (el.scoreValue) el.scoreValue.textContent = state.score.toLocaleString("de-DE");
+}
+
+function pulseScore() {
+  if (!el.scoreMeter) return;
+  el.scoreMeter.classList.remove("pulse");
+  void el.scoreMeter.offsetWidth;
+  el.scoreMeter.classList.add("pulse");
+  renderScore();
+}
+
+// --- Juice: schwebende Texte & Combo-Blitz ----------------------------------
+
+function spawnFloatingText(text, kind = "good", anchor = null) {
+  if (!el.fxLayer) return;
+  const node = document.createElement("div");
+  node.className = `float-text ${kind}`;
+  node.textContent = text;
+  const rect = anchor && anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : null;
+  if (rect) {
+    node.style.left = `${rect.left + rect.width / 2}px`;
+    node.style.top = `${rect.top}px`;
+  } else {
+    node.style.left = "50%";
+    node.style.top = "30%";
+  }
+  el.fxLayer.appendChild(node);
+  window.setTimeout(() => node.remove(), 1100);
+}
+
+function flashCombo(mult) {
+  if (!el.fxLayer) return;
+  const banner = document.createElement("div");
+  banner.className = "combo-banner";
+  banner.textContent = `COMBO ×${mult}`;
+  el.fxLayer.appendChild(banner);
+  sfxCombo(mult);
+  window.setTimeout(() => banner.remove(), 900);
+}
+
+function renderProfileSummary() {
+  if (!el.profileSummary) return;
+  const profile = state.profile;
+  if (!profile || profile.gamesPlayed === 0) {
+    el.profileSummary.hidden = true;
+    return;
+  }
+  const { current, next } = rankForXp(profile.totalXp);
+  const toNext = next ? `${(next.xp - profile.totalXp).toLocaleString("de-DE")} XP bis ${next.name}` : "Höchster Rang erreicht";
+  el.profileSummary.hidden = false;
+  el.profileSummary.innerHTML = `
+    <div class="profile-rank">
+      <span>Bardenstufe</span>
+      <strong>${current.name}</strong>
+      <small>${toNext}</small>
+    </div>
+    <div class="profile-stats">
+      <span>Bestscore <strong>${profile.bestScore.toLocaleString("de-DE")}</strong></span>
+      <span>Beste Serie <strong>${profile.bestStreak}</strong></span>
+      <span>Siege <strong>${profile.gamesWon}/${profile.gamesPlayed}</strong></span>
+    </div>
+  `;
+}
+
+function renderLeaderboard() {
+  if (el.dailyHint) {
+    const today = new Date().toISOString().slice(0, 10);
+    const daily = state.profile.daily;
+    el.dailyHint.textContent = daily && daily.date === today && daily.best > 0
+      ? `Heute schon ${daily.best.toLocaleString("de-DE")} Punkte – schlage deinen Wert`
+      : "Fester Lauf des Tages – vergleiche deinen Bestwert";
+  }
+  if (!el.leaderboardPanel) return;
+  const board = state.profile.leaderboard || [];
+  if (board.length === 0) {
+    el.leaderboardPanel.hidden = true;
+    return;
+  }
+  el.leaderboardPanel.hidden = false;
+  el.leaderboardPanel.innerHTML = `
+    <h3>Bestenliste</h3>
+    <ol>
+      ${board.map((entry) => `
+        <li>
+          <strong>${entry.score.toLocaleString("de-DE")}</strong>
+          <span>${entry.rank}${entry.won ? " · Sieg" : ""} · ${entry.date}</span>
+        </li>
+      `).join("")}
+    </ol>
+  `;
+}
+
+// --- Klang der Lyra: Web Audio (Batch B) ------------------------------------
+// Reine Oszillatoren, keine Audiodateien. Eine pentatonische Reihe sorgt
+// dafür, dass eine lange Serie wie eine aufsteigende Melodie klingt.
+
+const audio = { ctx: null };
+const LYRE_SCALE = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25, 587.33, 659.25, 783.99, 880.0];
+
+function ensureAudio() {
+  if (state.muted) return null;
+  if (!audio.ctx) {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return null;
+    audio.ctx = new Ctx();
+  }
+  if (audio.ctx.state === "suspended") audio.ctx.resume();
+  return audio.ctx;
+}
+
+function playTone(freq, duration = 0.18, { type = "triangle", gain = 0.16, delay = 0, glideTo = null } = {}) {
+  const ctx = ensureAudio();
+  if (!ctx) return;
+  const start = ctx.currentTime + delay;
+  const osc = ctx.createOscillator();
+  const amp = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, start);
+  if (glideTo) osc.frequency.exponentialRampToValueAtTime(glideTo, start + duration);
+  amp.gain.setValueAtTime(0.0001, start);
+  amp.gain.exponentialRampToValueAtTime(gain, start + 0.012);
+  amp.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+  osc.connect(amp).connect(ctx.destination);
+  osc.start(start);
+  osc.stop(start + duration + 0.05);
+}
+
+// Richtige Antwort: Tonhöhe steigt mit der Serie; ein perfektes Timing legt
+// eine helle Oktave darüber.
+function sfxCorrect(streak = 0, bonus = 0) {
+  const index = Math.min(LYRE_SCALE.length - 1, streak);
+  playTone(LYRE_SCALE[index], 0.22, { type: "triangle", gain: 0.16 });
+  if (bonus >= 0.5) playTone(LYRE_SCALE[index] * 2, 0.26, { type: "sine", gain: 0.1, delay: 0.04 });
+}
+
+function sfxWrong() {
+  playTone(180, 0.3, { type: "sawtooth", gain: 0.13, glideTo: 90 });
+}
+
+function sfxCombo(mult) {
+  const base = mult >= 5 ? 523.25 : mult >= 3 ? 392.0 : 329.63;
+  [0, 0.07, 0.14].forEach((d, i) => playTone(base * (1 + i * 0.25), 0.2, { type: "sine", gain: 0.12, delay: d }));
+}
+
+function sfxTick() {
+  playTone(660, 0.06, { type: "square", gain: 0.07 });
+}
+
+function sfxWin() {
+  [261.63, 329.63, 392.0, 523.25].forEach((f, i) => playTone(f, 0.5, { type: "triangle", gain: 0.14, delay: i * 0.13 }));
+}
+
+function sfxLose() {
+  [330, 247, 196, 147].forEach((f, i) => playTone(f, 0.55, { type: "sawtooth", gain: 0.12, delay: i * 0.16 }));
 }
 
 function useHint() {
@@ -2734,6 +3220,7 @@ function submitTyped(event) {
 }
 
 function resetGame() {
+  bankRunScore(false);
   stopBossTimer();
   stopQuestTimer();
   stopAscentTimer();
@@ -2745,6 +3232,15 @@ function resetGame() {
   state.hp = 5;
   state.mana = 3;
   state.streak = 0;
+  state.score = 0;
+  state.comboMax = 0;
+  state.runCorrect = 0;
+  state.runTotal = 0;
+  state.continuesLeft = 2;
+  state.levelStars = {};
+  state.levelDamage = {};
+  state.scoreBanked = false;
+  if (el.continueButton) el.continueButton.hidden = true;
   state.rescueTarget = null;
   state.rescueStreak = 0;
   state.grace = false;
@@ -2806,6 +3302,7 @@ function resetGame() {
 
 function selectDifficulty(difficulty) {
   if (!DIFFICULTIES[difficulty]) return;
+  endDailyMode();
   state.difficulty = difficulty;
   el.difficultyOverlay.hidden = true;
   document.body.classList.remove("difficulty-active");
@@ -2819,9 +3316,22 @@ function showDifficultySelection() {
   stopCutscene();
   el.gameOverOverlay.hidden = true;
   document.body.classList.remove("game-over-active");
+  renderProfileSummary();
+  renderLeaderboard();
   el.difficultyOverlay.hidden = false;
   document.body.classList.add("difficulty-active");
   window.setTimeout(() => el.difficultyOptions[0]?.focus(), 50);
+}
+
+function toggleMute() {
+  state.muted = !state.muted;
+  if (el.muteButton) el.muteButton.setAttribute("aria-pressed", String(state.muted));
+  document.body.classList.toggle("muted", state.muted);
+  try {
+    window.localStorage.setItem("orpheus-muted", state.muted ? "1" : "0");
+  } catch {
+    // Stummschaltung ist optional und darf ohne Speicher fehlschlagen.
+  }
 }
 
 function renderCodex() {
@@ -2938,6 +3448,7 @@ el.graceSkill.addEventListener("click", useGrace);
 el.inputForm.addEventListener("submit", submitTyped);
 el.closeDialog.addEventListener("click", () => el.tableDialog.close());
 el.gameOverRestart.addEventListener("click", resetGame);
+el.continueButton.addEventListener("click", continueRun);
 el.questAccept.addEventListener("click", acceptSideQuest);
 el.questDecline.addEventListener("click", declineSideQuest);
 el.questContinue.addEventListener("click", continueAfterSideQuest);
@@ -2946,6 +3457,18 @@ el.endingRestart.addEventListener("click", showDifficultySelection);
 el.difficultyOptions.forEach((button) => {
   button.addEventListener("click", () => selectDifficulty(button.dataset.difficulty));
 });
+el.muteButton.addEventListener("click", toggleMute);
+el.dailyButton.addEventListener("click", startDailyChallenge);
+
+try {
+  if (window.localStorage.getItem("orpheus-muted") === "1") {
+    state.muted = true;
+    el.muteButton.setAttribute("aria-pressed", "true");
+    document.body.classList.add("muted");
+  }
+} catch {
+  // Kein gespeicherter Stummschalt-Zustand vorhanden.
+}
 
 render();
 showDifficultySelection();

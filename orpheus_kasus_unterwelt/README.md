@@ -95,6 +95,39 @@ Sisyphus, die Danaiden und Ixion greifen Figuren auf, deren Strafen nach Ovids `
 
 Die Questchronik im Mythos-Codex hält gemeisterte, versuchte und abgelehnte Nebenquests samt ihrer Folgen fest.
 
+## Version 3: Spielgefühl und Wiederspielwert
+
+Diese Version baut das Belohnungssystem rund um das Lernen aus, ohne den fachlichen Kern zu verändern.
+
+### Punkte, Combos und Bardenstufen
+
+- Jede richtige Form gibt Punkte. Eine ununterbrochene Serie schaltet einen Combo-Multiplikator frei: ×2 ab 3 richtigen Antworten, ×3 ab 6, ×4 ab 9, ×5 ab 12.
+- Schwebende Punkte-Anzeigen, ein Combo-Banner und ein leuchtender Punktezähler geben sofortiges Feedback.
+- Ein dauerhaftes Profil (lokal im Browser gespeichert) sammelt Gesamt-XP über alle Läufe und vergibt **Bardenstufen** vom „Stummen Wanderer" bis zum „Bezwinger des Hades". Bestscore, beste Serie und Siegquote stehen im Startbildschirm.
+
+### Klang der Lyra
+
+- Richtige Formen erklingen als Töne, deren Tonhöhe mit der Serie steigt; eine lange Serie wird so zu einer aufsteigenden Melodie. Fehler reißen hörbar die Saite.
+- In der Schlussphase eines Bosskampfs tickt die Zeit hörbar. Ein Stummschalt-Knopf in der Kopfzeile merkt sich seine Einstellung.
+
+### Bosskampf mit Timing
+
+- Im Bosskampf wandern die Endungen über ein Notenblatt mit einer leuchtenden Trefferlinie. Wer die richtige Endung genau auf der Linie trifft, erhält „Perfekt" und Bonuspunkte.
+
+### Faires Scheitern
+
+- Bei Game over kann der Lauf mit begrenzten Fortsetzungen am Anfang des aktuellen Levels weitergespielt werden (gegen Punktabzug), statt von vorn zu beginnen.
+
+### Adaptive Wiederholung
+
+- Das Spiel merkt sich pro Deklinationsklasse und Kasus, welche Formen oft falsch beantwortet werden, und fragt diese Schwächen gezielt häufiger ab.
+
+### Sterne, Tagesherausforderung und Bestenliste
+
+- Jedes Level vergibt bis zu drei Sterne (Bestehen, perfekter Boss, kein Lebenspunktverlust). Sie erscheinen auf der Levelkarte.
+- Die **Tagesherausforderung** erzeugt aus dem Datum einen festen Lauf, der jeden Tag für alle gleich ist und einen vergleichbaren Tagesbestwert liefert.
+- Eine lokale Bestenliste hält die fünf höchsten Punktzahlen fest.
+
 ## Dateien
 
 - `index.html`: Oberfläche

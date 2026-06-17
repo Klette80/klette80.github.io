@@ -35,8 +35,17 @@
           <span id="streakLabel">Serie</span>
           <strong id="streakValue">0</strong>
         </div>
+        <div id="scoreMeter" class="meter compact score">
+          <span>Punkte</span>
+          <strong id="scoreValue">0</strong>
+        </div>
+        <button id="muteButton" class="mute-button" type="button" aria-pressed="false" aria-label="Ton an/aus" title="Ton an/aus">
+          <span class="mute-on" aria-hidden="true">♪</span>
+          <span class="mute-off" aria-hidden="true">✕</span>
+        </button>
       </div>
     </header>
+    <div id="fxLayer" class="fx-layer" aria-hidden="true"></div>
 
     <main class="game-grid">
       <section class="scene-panel" aria-label="Szene">
@@ -370,6 +379,7 @@
         <h2 id="difficultyTitle">Wie tief wagst du dich?</h2>
         <p>Der Rang bestimmt, welche Deklinationsklassen während der gesamten Reise und in den Bosskämpfen abgefragt werden.</p>
       </div>
+      <div id="profileSummary" class="profile-summary" hidden></div>
       <div class="difficulty-options">
         <button class="difficulty-option" type="button" data-difficulty="novice">
           <span class="rank-number">I</span>
@@ -387,6 +397,11 @@
           <small>Alle Klassen einschließlich u-Deklination</small>
         </button>
       </div>
+      <button id="dailyButton" class="daily-button" type="button">
+        <strong>Tagesherausforderung</strong>
+        <small id="dailyHint">Fester Lauf des Tages – vergleiche deinen Bestwert</small>
+      </button>
+      <div id="leaderboardPanel" class="leaderboard-panel" hidden></div>
     </section>
   </div>
 
@@ -402,7 +417,10 @@
       <h2 id="gameOverTitle">Ludus finitus est</h2>
       <p id="gameOverReason">Orpheus hat seine letzten Lebenspunkte verloren.</p>
       <div id="gameOverProgress" class="game-over-progress"></div>
-      <button id="gameOverRestart" type="button">Erneut hinabsteigen</button>
+      <div class="game-over-actions">
+        <button id="continueButton" type="button" class="primary" hidden>Weiterspielen</button>
+        <button id="gameOverRestart" type="button">Erneut hinabsteigen</button>
+      </div>
     </div>
   </div>
 
