@@ -52,6 +52,7 @@
   .opt{text-align:left;background:var(--card);border:2px solid var(--line);color:var(--ink);
     border-radius:14px;padding:14px 16px;font-size:16px;cursor:pointer;transition:.1s}
   .opt:hover{border-color:var(--accent)} .opt:active{transform:translateY(1px)}
+  .opt.sel{border-color:var(--accent2);background:#2c3470}
   .opt.correct{border-color:var(--good);background:#143a26}
   .opt.wrong{border-color:var(--bad);background:#3a1620}
   .opt.dim{opacity:.4}
@@ -114,7 +115,15 @@
   .slot .val{color:var(--muted);flex:1} .slot .val.filled{color:var(--ink);font-weight:700}
   .slot.correct{border-color:var(--good)}.slot.wrong{border-color:var(--bad)}
   .diagram{display:flex;justify-content:center;margin:4px 0 10px}
-  .diagram svg{max-width:100%;height:auto;background:#11142f;border-radius:14px;border:1px solid var(--line)}
+  .diagram svg,.diagram img{max-width:100%;height:auto;background:#fff;border-radius:14px;border:1px solid var(--line)}
+  .media{margin:4px 0 14px}
+  .media img{display:block;max-width:100%;height:auto;margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:14px}
+  .media figcaption{color:var(--muted);font-size:13px;line-height:1.35;margin-top:6px;text-align:center}
+  .labelpic{position:relative;display:inline-block;line-height:0}
+  .labelpic img{display:block}
+  .marker{position:absolute;transform:translate(-50%,-50%);width:28px;height:28px;border-radius:999px;
+    display:grid;place-items:center;background:var(--accent2);color:#08122a;border:2px solid #08122a;
+    font-weight:900;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,.35);line-height:1}
   .epart{margin:12px 0;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:#11142f}
   .epart .pq{font-weight:700;margin-bottom:9px}
   .claim{background:#11142f;border-left:4px solid var(--accent2);border-radius:8px;padding:10px 13px;margin-bottom:6px;font-size:15.5px}
@@ -133,7 +142,7 @@
       <div class="tag">Das Lernabenteuer für <b>Natur und Technik</b> · Jahrgangsstufe 5 & 6 · Gymnasium Bayern</div>
     </div>
     <div class="card" style="margin-top:18px">
-      <p>Reise durch <b>5 Themenwelten</b>, sammle <b>XP, Münzen und Sterne</b>, baue <b>Combo-Ketten</b> auf und besiege die <b>Bosse</b> (Transfer-Fragen). Je weniger Fehler, desto mehr Sterne! 🌟</p>
+      <p>Reise durch <b>5 prüfungsnahe Themenwelten</b>, sammle <b>XP, Münzen und Sterne</b>, werte <b>Diagramme, Schaubilder und Fallbeispiele</b> aus und besiege die <b>Bosse</b> (Transfer-Fragen). Je weniger Fehler, desto mehr Sterne! 🌟</p>
       <ul style="color:var(--muted);line-height:1.7;margin:8px 0">
         <li>🧩 Abwechslungsreiche Aufgaben: Auswählen, Beschriften, Ordnen, Zuordnen, Erklären und Vergleichen</li>
         <li>❤️ 3 Leben pro Welt – bei 0 musst du die Welt neu starten</li>
@@ -544,6 +553,26 @@ const OPDESC={mc:"Tippe die richtige Antwort an.",
   label:"Tippe einen Begriff an und danach die passende Nummer im Schaubild.",
   explain:"Beantworte beide Teilfragen – Begründung und Beispiel.",
   judge:"Triff zuerst eine Entscheidung und wähle dann alle passenden Begründungen aus."};
+function renderMedia(q,ans,withMarkers=false){
+  if(!q.media) return;
+  const fig=document.createElement("figure"); fig.className="media";
+  const wrap=document.createElement(withMarkers?"div":"span");
+  if(withMarkers) wrap.className="labelpic";
+  const img=document.createElement("img");
+  img.src=q.media.src; img.alt=q.media.alt||"";
+  wrap.appendChild(img);
+  if(withMarkers){
+    q.slots.forEach(s=>{
+      if(s.x==null||s.y==null) return;
+      const m=document.createElement("span"); m.className="marker";
+      m.style.left=s.x+"%"; m.style.top=s.y+"%"; m.textContent=s.n;
+      wrap.appendChild(m);
+    });
+  }
+  fig.appendChild(wrap);
+  if(q.media.caption){ const cap=document.createElement("figcaption"); cap.textContent=q.media.caption; fig.appendChild(cap); }
+  ans.appendChild(fig);
+}
 function renderQ(){
   G.answered=false; G.used={}; G.sel=null; G.selTerm=null; G.assign={}; G.seq=[]; G.picks=[]; G.mcPick=null; G.jVerdict=null; G.jReasons=[];
   const q=G.qs[G.i];
@@ -555,6 +584,7 @@ function renderQ(){
   document.getElementById("qText").textContent=q.q;
   const op=document.getElementById("qOp"); op.textContent=OPDESC[q.type]||""; op.classList.remove("hidden");
   const ans=document.getElementById("qAns"); ans.innerHTML=""; ans.style.pointerEvents="";
+  if(q.type!=="label") renderMedia(q,ans);
   if(q.type==="mc") renderMC(q,ans); else
   if(q.type==="order") renderOrder(q,ans); else
   if(q.type==="sort"||q.type==="compare") renderBuckets(q,ans); else
@@ -639,7 +669,10 @@ function checkBuckets(q){ let ok=0; q.items.forEach((it,k)=>{ if(G.assign[k]===i
 
 /* ---- Renderer: Beschriften (Begriffe ins Schaubild) ---- */
 function renderLabel(q,ans){
-  const dia=document.createElement("div"); dia.className="diagram"; dia.innerHTML=q.svg; ans.appendChild(dia);
+  const dia=document.createElement("div"); dia.className="diagram";
+  if(q.svg) dia.innerHTML=q.svg;
+  else renderMedia(q,dia,true);
+  ans.appendChild(dia);
   const slots=document.createElement("div"); slots.className="slots";
   q.slots.forEach((s,si)=>{
     const row=document.createElement("div"); row.className="slot"+(G.sel===si?" sel":"");
@@ -725,6 +758,7 @@ function checkJudge(q){
 /* re-render aktueller Aufgabe ohne Statusreset (für Zwischenschritte) */
 function renderQ_keep(){
   const q=G.qs[G.i]; const ans=document.getElementById("qAns"); ans.innerHTML="";
+  if(q.type!=="label") renderMedia(q,ans);
   if(q.type==="order") renderOrder(q,ans); else
   if(q.type==="sort"||q.type==="compare") renderBuckets(q,ans); else
   if(q.type==="label") renderLabel(q,ans); else
@@ -735,6 +769,7 @@ function renderQ_keep(){
 /* zeigt die Lösung an (nach dem Prüfen, mit G.answered === true) */
 function revealTask(q){
   const ans=document.getElementById("qAns"); ans.innerHTML="";
+  if(q.type!=="label") renderMedia(q,ans);
   if(q.type==="mc") renderMC(q,ans); else
   if(q.type==="order") renderOrder(q,ans); else
   if(q.type==="sort"||q.type==="compare") renderBuckets(q,ans); else
@@ -965,5 +1000,6 @@ function confetti(){
 if(S.player) document.getElementById("playerName").value=S.player;
 renderMap();
 </script>
+<script src="pruefungsfragen.js"></script>
 </body>
 </html>
