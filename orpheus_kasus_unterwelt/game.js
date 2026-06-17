@@ -730,6 +730,12 @@ const DIFFICULTIES = {
   }
 };
 
+const BOSS_TIME_LIMITS = {
+  novice: [32, 30, 27, 24, 22],
+  legionary: [27, 25, 22, 19, 17],
+  centurion: [23, 21, 18, 16, 14]
+};
+
 const state = {
   difficulty: null,
   levelIndex: 0,
@@ -1122,6 +1128,10 @@ function currentLevel() {
 
 function currentTask() {
   return currentLevel().tasks[state.taskIndex];
+}
+
+function bossTimeLimit(levelIndex = state.levelIndex) {
+  return BOSS_TIME_LIMITS[state.difficulty]?.[levelIndex] || currentLevel().boss.seconds;
 }
 
 function normalize(value) {
@@ -2402,7 +2412,7 @@ function startBoss() {
   state.bossIndex = 0;
   state.bossScore = 0;
   const timeBonus = state.bossTimeBonuses[state.levelIndex] || 0;
-  state.bossTimeLeft = currentLevel().boss.seconds + timeBonus;
+  state.bossTimeLeft = bossTimeLimit() + timeBonus;
   state.activeBossShield = state.bossShields[state.levelIndex] || 0;
   if (timeBonus > 0) markConsequenceResolved("boss_time", state.levelIndex);
   if (state.activeBossShield > 0) markConsequenceResolved("boss_shield", state.levelIndex);
