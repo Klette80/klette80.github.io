@@ -458,12 +458,34 @@ const ACHIEVEMENTS = [
 ];
 
 /* ====================== STATE ====================== */
+const SAVE_KEY = "natuquest";
+const BOARD_KEY = "natuquestBoard";
 const DEF = {coins:0, xp:0, level:1, high:0, stars:{}, done:{}, ach:[], bossKills:0, transferKills:0, player:"", board:[]};
 let S = load();
 let G = null; // aktuelles Spiel
 
-function load(){ try{return Object.assign({},DEF,JSON.parse(localStorage.getItem("natuquest")||"{}"));}catch(e){return Object.assign({},DEF);} }
-function save(){ localStorage.setItem("natuquest", JSON.stringify(S)); }
+function readStore(key, fallback){
+  try{
+    const raw=localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  }catch(e){ return fallback; }
+}
+function loadBoard(migratedBoard){
+  const saved=readStore(BOARD_KEY, null);
+  if(Array.isArray(saved)) return saved;
+  return Array.isArray(migratedBoard) ? migratedBoard : [];
+}
+function load(){
+  const data=Object.assign({},DEF,readStore(SAVE_KEY,{}));
+  data.board=loadBoard(data.board);
+  return data;
+}
+function save(){
+  const board=Array.isArray(S.board) ? S.board : [];
+  const progress=Object.assign({},S,{board:[]});
+  localStorage.setItem(SAVE_KEY, JSON.stringify(progress));
+  localStorage.setItem(BOARD_KEY, JSON.stringify(board));
+}
 function resetAll(){ if(confirm("Eigenen Fortschritt (Level, Münzen, freigeschaltete Welten) löschen?\n\nDer Klassen-Highscore bleibt erhalten.")){ const keep=S.board; S=Object.assign({},DEF,{stars:{},done:{},ach:[],board:keep}); save(); document.getElementById('playerName').value=""; renderMap(); show('start'); } }
 
 /* ====================== NAV ====================== */
