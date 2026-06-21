@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 540" role="img" aria-label="Das Labyrinth von Kreta – Latein-Abenteuer">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0d1920"/>
+      <stop offset="1" stop-color="#071016"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="58%" r="62%">
+      <stop offset="0" stop-color="#c6964b" stop-opacity="0.20"/>
+      <stop offset="1" stop-color="#c6964b" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="800" height="540" fill="url(#bg)"/>
+  <rect width="800" height="540" fill="url(#glow)"/>
+
+  <!-- scattered stars -->
+  <g fill="#e2bf7b" opacity="0.20">
+    <circle cx="80" cy="70" r="2"/><circle cx="180" cy="110" r="1.6"/><circle cx="720" cy="80" r="2"/>
+    <circle cx="630" cy="140" r="1.6"/><circle cx="110" cy="430" r="1.6"/><circle cx="710" cy="440" r="2"/>
+    <circle cx="60" cy="260" r="1.6"/><circle cx="745" cy="300" r="1.6"/>
+  </g>
+
+  <!-- classical labyrinth (square meander spiral) -->
+  <g transform="translate(400 330)" fill="none" stroke="#c6964b" stroke-width="6" stroke-linecap="square" stroke-linejoin="miter">
+    <path d="M0 -126 L 126 -126 L 126 126 L -126 126 L -126 -90 L 90 -90 L 90 90 L -90 90 L -90 -54 L 54 -54 L 54 54 L -54 54 L -54 -18 L 18 -18 L 18 18 L -18 18" opacity="0.95"/>
+    <!-- entrance gap markers -->
+    <line x1="-18" y1="18" x2="-18" y2="40" opacity="0.6"/>
+  </g>
+
+  <!-- minotaur horns mark at the labyrinth heart -->
+  <g transform="translate(400 318)" fill="none" stroke="#e2bf7b" stroke-width="3.4" stroke-linecap="round">
+    <path d="M-9 4 C -16 -8, -14 -16, -6 -16 M9 4 C 16 -8, 14 -16, 6 -16"/>
+    <circle cx="0" cy="2" r="2.2" fill="#e2bf7b" stroke="none"/>
+  </g>
+
+  <!-- Ariadne's thread -->
+  <g fill="none" stroke="#7b282b" stroke-width="2.6" stroke-linecap="round" opacity="0.85">
+    <path d="M418 470 C 470 440, 470 380, 420 360 C 372 342, 366 300, 410 300"/>
+    <circle cx="418" cy="470" r="4" fill="#7b282b" stroke="none"/>
+  </g>
+
+  <!-- wordmark -->
+  <g font-family="Georgia, 'Times New Roman', serif" text-anchor="middle">
+    <text x="400" y="108" fill="#f3e7cf" font-size="50" font-weight="500" letter-spacing="1">Das Labyrinth von Kreta</text>
+    <text x="400" y="146" fill="#aeb8bc" font-size="20" font-family="Segoe UI, Arial, sans-serif" letter-spacing="3">LATEIN · DEKLINATIONEN · MYTHOLOGIE</text>
+  </g>
+</svg>

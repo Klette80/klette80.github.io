@@ -5,6 +5,8 @@ Eine statische Plattform für fachlich fundierte, erzählerische Browsergames im
 ## Enthaltene Spiele
 
 - **Orpheus: Die Kasus der Unterwelt**: Latein-Lernspiel zu Deklinationen und antiker Mythologie.
+- **Das Labyrinth von Kreta**: Latein-Abenteuer zu Deklinationen und Mythologie (Theseus, Minotaurus).
+- **NaTu-Quest**: Quiz-Abenteuer für Natur & Technik / Biologie (Klasse 5 & 6).
 
 ## Lokal starten
 

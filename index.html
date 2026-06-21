@@ -25,6 +25,7 @@
     <nav aria-label="Hauptnavigation">
       <a href="#spiele">Spiele</a>
       <a href="#projekt">Über das Projekt</a>
+      <a href="#mitmachen">Mitmachen</a>
     </nav>
   </header>
 
@@ -76,39 +77,66 @@
         <p>Fachliches Lernen als spielbare Erfahrung.</p>
       </div>
 
-      <a class="game-entry" href="orpheus_kasus_unterwelt/">
-        <figure>
-          <img src="site-assets/orpheus-hero.png" alt="Orpheus am Ufer des Styx">
-        </figure>
-        <div class="game-entry-copy">
-          <div>
-            <h3>Orpheus: Die Kasus der Unterwelt</h3>
-            <p class="game-meta">Latein <span>·</span> Deklinationen <span>·</span> Mythologie</p>
-            <p>Ein storybasiertes Lern-Rollenspiel mit Bosskämpfen, Nebenquests und mehreren Enden.</p>
-          </div>
-          <span class="entry-action">
-            Spiel starten
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M14 7l5 5-5 5"/></svg>
-          </span>
-        </div>
-      </a>
+      <div class="filter-bar" role="group" aria-label="Spiele nach Fach filtern" data-filter-bar>
+        <button type="button" class="filter-chip is-active" data-fach="alle" aria-pressed="true">Alle</button>
+        <button type="button" class="filter-chip" data-fach="latein" aria-pressed="false">Latein</button>
+        <button type="button" class="filter-chip" data-fach="natur-technik" aria-pressed="false">Natur &amp; Technik</button>
+      </div>
 
-      <a class="game-entry" href="natu-quest/">
-        <figure>
-          <img src="site-assets/natu-quest-cover.svg" alt="NaTu-Quest – Lernspiel für Natur und Technik">
-        </figure>
-        <div class="game-entry-copy">
-          <div>
-            <h3>NaTu-Quest</h3>
-            <p class="game-meta">Natur &amp; Technik <span>·</span> Biologie <span>·</span> Klasse 5 &amp; 6</p>
-            <p>Ein Quiz-Abenteuer durch fünf Themenwelten mit Combo-Ketten, Power-ups, Bosskämpfen und Klassen-Highscore – Vorbereitung auf den Jahrgangsstufentest.</p>
+      <div class="game-grid" data-game-grid>
+        <a class="game-entry" href="orpheus_kasus_unterwelt/" data-fach="latein">
+          <figure>
+            <img src="site-assets/orpheus-hero.png" alt="Orpheus am Ufer des Styx">
+          </figure>
+          <div class="game-entry-copy">
+            <div>
+              <h3>Orpheus: Die Kasus der Unterwelt</h3>
+              <p class="game-meta">Latein <span>·</span> Deklinationen <span>·</span> Mythologie</p>
+              <p>Ein storybasiertes Lern-Rollenspiel mit Bosskämpfen, Nebenquests und mehreren Enden.</p>
+            </div>
+            <span class="entry-action">
+              Spiel starten
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M14 7l5 5-5 5"/></svg>
+            </span>
           </div>
-          <span class="entry-action">
-            Spiel starten
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M14 7l5 5-5 5"/></svg>
-          </span>
-        </div>
-      </a>
+        </a>
+
+        <a class="game-entry" href="labyrinth-von-kreta/" data-fach="latein">
+          <figure>
+            <img src="site-assets/labyrinth-von-kreta-cover.svg" alt="Das Labyrinth von Kreta – Latein-Abenteuer">
+          </figure>
+          <div class="game-entry-copy">
+            <div>
+              <h3>Das Labyrinth von Kreta</h3>
+              <p class="game-meta">Latein <span>·</span> Deklinationen <span>·</span> Mythologie</p>
+              <p>Ein Latein-Abenteuer: Folge dem Faden der Ariadne durch das Labyrinth, bezwinge die Deklinationen und stelle dich dem Minotaurus.</p>
+            </div>
+            <span class="entry-action">
+              Spiel starten
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M14 7l5 5-5 5"/></svg>
+            </span>
+          </div>
+        </a>
+
+        <a class="game-entry" href="natu-quest/" data-fach="natur-technik">
+          <figure>
+            <img src="site-assets/natu-quest-cover.svg" alt="NaTu-Quest – Lernspiel für Natur und Technik">
+          </figure>
+          <div class="game-entry-copy">
+            <div>
+              <h3>NaTu-Quest</h3>
+              <p class="game-meta">Natur &amp; Technik <span>·</span> Biologie <span>·</span> Klasse 5 &amp; 6</p>
+              <p>Ein Quiz-Abenteuer durch fünf Themenwelten mit Combo-Ketten, Power-ups, Bosskämpfen und Klassen-Highscore – Vorbereitung auf den Jahrgangsstufentest.</p>
+            </div>
+            <span class="entry-action">
+              Spiel starten
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M14 7l5 5-5 5"/></svg>
+            </span>
+          </div>
+        </a>
+      </div>
+
+      <p class="filter-empty" data-filter-empty hidden>Für dieses Fach gibt es noch kein Spiel – aber es kommen laufend neue dazu.</p>
 
       <div class="future-entry">
         <div class="temple-mark" aria-hidden="true">
@@ -123,8 +151,11 @@
 
     <section id="projekt" class="principles" aria-labelledby="principles-title">
       <div class="section-heading">
-        <h2 id="principles-title">Entwickelt für echten Unterricht</h2>
-        <p>Digitale Lernräume, die fachliche Substanz und Spielfreude zusammendenken.</p>
+        <h2 id="principles-title">Über das Projekt</h2>
+        <p>Ein Hobbyprojekt rund um Spielfreude und das Lernen.</p>
+      </div>
+      <div class="project-intro">
+        <p>Ludus Digitalis ist ein privates Hobbyprojekt. Die Spiele entstehen aus Freude am Ausprobieren und sollen das Üben ein Stück lebendiger machen. Ich baue sie mit Sorgfalt, aber sie erheben nicht den Anspruch, in allen Belangen fehlerfrei oder vollständig zu sein – Inhalte und Mechaniken entwickeln sich weiter, und über Hinweise auf Fehler freue ich mich.</p>
       </div>
       <div class="principle-rail">
         <article>
@@ -137,8 +168,8 @@
         <article>
           <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M7 13h34M10 13l14-7 14 7M12 18v22M20 18v22M28 18v22M36 18v22M7 42h34"/></svg>
           <div>
-            <h3>Didaktisch fundiert</h3>
-            <p>Inhalte aus Unterrichtspraxis, fachlich geprüft und progressiv aufgebaut.</p>
+            <h3>Aus der Praxis</h3>
+            <p>Die Themen stammen aus dem Schulalltag und werden Stück für Stück verbessert.</p>
           </div>
         </article>
         <article>
@@ -148,6 +179,23 @@
             <p>Geschichten, Entscheidungen und Spielmechaniken geben dem Üben Bedeutung.</p>
           </div>
         </article>
+      </div>
+    </section>
+
+    <section id="mitmachen" class="feedback" aria-labelledby="feedback-title">
+      <div class="feedback-card">
+        <div class="feedback-copy">
+          <p class="section-label">Mitmachen</p>
+          <h2 id="feedback-title">Feedback &amp; Spielwünsche</h2>
+          <p>Ein Fehler entdeckt, eine Idee für ein neues Spiel oder ein Thema, das du dir wünschst? Über kurze Rückmeldungen freue ich mich sehr. Das Formular dauert keine Minute – einen Namen brauchst du nicht anzugeben.</p>
+          <div class="feedback-actions">
+            <a class="button button-primary" href="https://tally.so/r/DEIN-FORMULAR" target="_blank" rel="noopener" data-feedback-link>
+              Feedback geben
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M14 7l5 5-5 5"/></svg>
+            </a>
+          </div>
+          <p class="feedback-note">Die Rückmeldungen sammeln sich für mich gebündelt – kein Konto, keine öffentliche Kommentarspalte.</p>
+        </div>
       </div>
     </section>
   </main>
@@ -160,6 +208,7 @@
     <nav aria-label="Fußnavigation">
       <a href="#spiele">Spiele</a>
       <a href="#projekt">Über das Projekt</a>
+      <a href="#mitmachen">Mitmachen</a>
     </nav>
     <p>Ein wachsender Space für digitale Bildung.</p>
   </footer>

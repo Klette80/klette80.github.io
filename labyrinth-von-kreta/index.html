@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Das Labyrinth von Kreta – Latein-Abenteuer</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+    background: radial-gradient(circle at 50% 30%, #2a2438, #14101c);
+    color: #f3ecd8;
+    display: flex; flex-direction: column; align-items: center;
+    min-height: 100vh; padding: 14px;
+    overscroll-behavior: none; -webkit-tap-highlight-color: transparent;
+  }
+  button, .ans { touch-action: manipulation; }
+  h1 { font-size: 30px; color: #e9c46a; text-shadow: 2px 2px 0 #00000066; letter-spacing: 1px; }
+  #stage {
+    position: relative;
+    width: 900px; max-width: 100%;
+    aspect-ratio: 900 / 600;   /* behält 3:2 auch auf schmalen Handys -> keine Verzerrung */
+    height: auto;
+    margin-top: 12px;
+    border: 4px solid #6b5b3e;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #d9c9a3;
+    box-shadow: 0 10px 40px #00000080;
+  }
+  canvas { display: block; width: 100%; height: 100%; background: #cdba8e; touch-action: none; }
+
+  /* ---- Overlays ---- */
+  .screen {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 30px;
+    background: radial-gradient(ellipse at 50% 32%, #3a2f4af2 0%, #1a1226f7 68%);
+    z-index: 20;
+  }
+  .screen h2 { font-size: 28px; color: #e9c46a; margin-bottom: 12px; }
+  .screen p { font-size: 17px; line-height: 1.5; max-width: 640px; margin-bottom: 12px; }
+  .fact {
+    background: #00000040; border-left: 4px solid #e76f51;
+    padding: 12px 16px; border-radius: 6px; font-style: italic; color: #ffe;
+    max-width: 620px;
+  }
+  button.big {
+    margin-top: 18px; font-size: 19px; font-weight: bold;
+    padding: 13px 30px; border: none; border-radius: 8px; cursor: pointer;
+    background: #e76f51; color: #fff; box-shadow: 0 4px 0 #a83c25;
+    transition: transform .07s;
+  }
+  button.big:hover { background: #f4845f; }
+  button.big:active { transform: translateY(3px); box-shadow: 0 1px 0 #a83c25; }
+
+  /* ---- Quiz ---- */
+  #quiz { gap: 6px; padding: 24px; }
+  .scene { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
+  .qcard {
+    position: relative; z-index: 1;
+    display: flex; flex-direction: column; align-items: center;
+    max-width: 700px;
+    background: rgba(18,11,28,0.74);
+    border: 2px solid rgba(233,196,106,0.45);
+    border-radius: 16px;
+    padding: 22px 26px 26px;
+    box-shadow: 0 12px 45px rgba(0,0,0,0.55);
+    backdrop-filter: blur(2px);
+  }
+  .decl-tag {
+    display:inline-block; background:#264653; color:#e9c46a;
+    padding:3px 12px; border-radius:20px; font-size:13px; margin-bottom:6px;
+  }
+  #storyLine {
+    font-style: italic; color:#e9c46a; font-size: 16px; margin-bottom: 12px; max-width: 600px;
+    background:#00000038; padding:9px 16px; border-radius:8px; border-left:4px solid #e76f51;
+  }
+  #question { font-size: 24px; color:#fff; margin-bottom: 18px; max-width: 660px; }
+  #question b { color:#e9c46a; }
+  #answers { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 540px; max-width:100%; }
+  .ans {
+    font-size: 20px; padding: 14px; border-radius: 8px; cursor: pointer;
+    background: #f3ecd8; color: #2a1f3a; border: 2px solid #b9a06a; font-weight: bold;
+    transition: transform .05s;
+  }
+  .ans:hover { background: #fff7e0; }
+  .ans:active { transform: scale(0.97); }
+  .ans.correct { background: #2a9d8f; color:#fff; border-color:#1e7268; }
+  .ans.wrong { background: #e63946; color:#fff; border-color:#a51d28; }
+
+  /* ---- HUD ---- */
+  #hud {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 30;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 14px; font-size: 16px; pointer-events: none;
+    background: linear-gradient(#1d1730ee, #1d173000);
+  }
+  #hearts { font-size: 22px; letter-spacing: 2px; }
+  #progWrap { flex: 1; margin: 0 16px; }
+  #progBar { height: 16px; background: #00000055; border-radius: 10px; overflow: hidden; border:1px solid #00000088; }
+  #progFill { height: 100%; width: 0%; background: linear-gradient(90deg,#2a9d8f,#e9c46a); transition: width .3s; }
+  #progLabel { font-size: 13px; margin-top: 2px; }
+  #waveInfo { font-weight: bold; color:#e9c46a; text-shadow:1px 1px 0 #000; }
+  /* ---- Superattacke ---- */
+  /* ---- Neue Waffe erhalten ---- */
+  #weaponScreen { background: rgba(35,18,2,0.74); }
+  .weapon-pop { display:flex; flex-direction:column; align-items:center; animation: popIn 0.45s ease-out; }
+  @keyframes popIn { from { transform: scale(0.35); opacity:0; } to { transform: scale(1); opacity:1; } }
+  .weapon-title { font-size:30px; font-weight:bold; color:#ffd24a; text-shadow:0 0 18px #ff8a00, 2px 2px 0 #7a4a00; margin-bottom:4px; text-align:center; }
+  .weapon-img { width:340px; max-width:80%; height:auto; filter: drop-shadow(0 0 16px #ff9a2e); }
+  .weapon-sub { font-size:18px; color:#fff; margin-top:4px; }
+  .weapon-sub b { color:#ffd24a; }
+  .flame { transform-origin:center; animation: flick 0.22s infinite alternate; }
+  @keyframes flick { from { opacity:0.7; transform: translateY(2px) scaleY(0.85); } to { opacity:1; transform: translateY(-2px) scaleY(1.18); } }
+
+  #superScreen { background: rgba(55,6,6,0.62); }
+  #superWarn {
+    font-size: 46px; font-weight: bold; color:#fff; text-align:center; line-height:1.1;
+    text-shadow: 0 0 22px #e63946, 3px 3px 0 #7a0000;
+    animation: warnPulse 0.28s infinite alternate;
+  }
+  @keyframes warnPulse { from { transform: scale(1); } to { transform: scale(1.13); } }
+  .qcard.super { border-color: #e63946; box-shadow: 0 0 45px #e6394680, 0 12px 45px rgba(0,0,0,0.6); }
+  .super-tag { background:#e63946 !important; color:#fff !important; font-size:16px; animation: pulse 0.55s infinite alternate; }
+  @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.09); } }
+  #superInfo { color:#ffe9c7; font-size:15px; margin-bottom:10px; max-width:560px; }
+  #superTimerBar { width:100%; height:16px; background:#00000066; border:1px solid #e63946; border-radius:8px; overflow:hidden; margin-bottom:16px; }
+  #superTimerFill { height:100%; width:100%; background: linear-gradient(90deg,#e63946,#ffb24a); }
+  #superQuestion { font-size:22px; color:#fff; margin-bottom:16px; max-width:620px; }
+  #superAnswers { display:grid; grid-template-columns:1fr 1fr; gap:12px; width:540px; max-width:100%; }
+  .hidden { display: none !important; }
+  #hint { margin-top:10px; font-size:13px; color:#caa; }
+</style>
+</head>
+<body>
+<h1>🏛️ Das Labyrinth von Kreta</h1>
+
+<div id="stage">
+  <canvas id="game" width="900" height="600"></canvas>
+
+  <!-- HUD (combat) -->
+  <div id="hud" class="hidden">
+    <div id="hearts">❤️❤️❤️❤️❤️</div>
+    <div id="progWrap">
+      <div id="progBar"><div id="progFill"></div></div>
+      <div id="progLabel">Fortschritt: 0%</div>
+    </div>
+    <div id="waveInfo"></div>
+  </div>
+
+  <!-- Intro -->
+  <div id="intro" class="screen">
+    <h2>Gefangen im Labyrinth des Königs Minos</h2>
+    <p>König <b>Minos</b> von Kreta hat dich in sein endloses Labyrinth gesperrt – das Heim des
+    gefürchteten Minotaurus. Nur wer die alte Sprache <b>Latein</b> meistert, findet den Weg hinaus.</p>
+    <p>📚 Beantworte Latein-Aufgaben (a-, o- und 3. Deklination). Jede richtige Antwort bringt dich
+    <b>5%</b> weiter. Bei <b>25 %, 50 % und 75 %</b> stellen sich dir die Wachen in den Weg – und bei
+    <b>100 %</b> der König selbst!</p>
+    <div class="fact" id="introFact"></div>
+    <div id="hint">⚔️ Am PC: <b>WASD</b> = bewegen • <b>linke Maustaste</b> = zuschlagen<br>📱 Am Handy/Tablet: <b>linker Daumen</b> = laufen • <b>rechter Daumen</b> = zielen &amp; schlagen<br>Geh hinter die Säulen in Deckung!</div>
+    <button class="big" id="startBtn">Abenteuer starten</button>
+  </div>
+
+  <!-- Quiz -->
+  <div id="quiz" class="screen hidden">
+    <svg class="scene" viewBox="0 0 900 600" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs>
+        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#352b50"/><stop offset="1" stop-color="#130d1e"/>
+        </linearGradient>
+        <radialGradient id="glow" cx="50%" cy="40%" r="60%">
+          <stop offset="0" stop-color="#e9913c" stop-opacity="0.40"/>
+          <stop offset="1" stop-color="#e9913c" stop-opacity="0"/>
+        </radialGradient>
+        <linearGradient id="stone" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#efe4c4"/><stop offset="0.5" stop-color="#dccfa8"/><stop offset="1" stop-color="#b3a578"/>
+        </linearGradient>
+        <pattern id="meander" width="34" height="22" patternUnits="userSpaceOnUse">
+          <path d="M4 18 H30 V6 H11 V12 H21" fill="none" stroke="#9c7b4a" stroke-width="2"/>
+        </pattern>
+      </defs>
+      <rect width="900" height="600" fill="url(#sky)"/>
+      <ellipse cx="450" cy="240" rx="540" ry="360" fill="url(#glow)"/>
+      <polygon points="0,468 900,468 900,600 0,600" fill="#221a13"/>
+      <polygon points="160,468 740,468 900,600 0,600" fill="#2f2418"/>
+      <rect x="0" y="36" width="900" height="46" fill="#cdbf97"/>
+      <rect x="0" y="44" width="900" height="22" fill="url(#meander)"/>
+      <rect x="0" y="82" width="900" height="7" fill="#9c7b4a"/>
+      <g>
+        <rect x="60" y="450" width="100" height="22" fill="#c8bb92"/>
+        <rect x="72" y="92" width="76" height="360" fill="url(#stone)"/>
+        <line x1="90" y1="92" x2="90" y2="452" stroke="#00000022" stroke-width="3"/>
+        <line x1="110" y1="92" x2="110" y2="452" stroke="#00000022" stroke-width="3"/>
+        <line x1="130" y1="92" x2="130" y2="452" stroke="#00000022" stroke-width="3"/>
+        <rect x="60" y="80" width="100" height="16" fill="#dccfa8"/>
+      </g>
+      <g>
+        <rect x="740" y="450" width="100" height="22" fill="#c8bb92"/>
+        <rect x="752" y="92" width="76" height="360" fill="url(#stone)"/>
+        <line x1="770" y1="92" x2="770" y2="452" stroke="#00000022" stroke-width="3"/>
+        <line x1="790" y1="92" x2="790" y2="452" stroke="#00000022" stroke-width="3"/>
+        <line x1="810" y1="92" x2="810" y2="452" stroke="#00000022" stroke-width="3"/>
+        <rect x="740" y="80" width="100" height="16" fill="#dccfa8"/>
+      </g>
+      <g>
+        <circle cx="190" cy="210" r="46" fill="#e9913c" opacity="0.18"/>
+        <rect x="187" y="210" width="6" height="26" fill="#4a3320"/>
+        <ellipse cx="190" cy="204" rx="8" ry="16" fill="#e8731f"/>
+        <ellipse cx="190" cy="204" rx="4" ry="9" fill="#ffc24a"/>
+      </g>
+      <g>
+        <circle cx="710" cy="210" r="46" fill="#e9913c" opacity="0.18"/>
+        <rect x="707" y="210" width="6" height="26" fill="#4a3320"/>
+        <ellipse cx="710" cy="204" rx="8" ry="16" fill="#e8731f"/>
+        <ellipse cx="710" cy="204" rx="4" ry="9" fill="#ffc24a"/>
+      </g>
+    </svg>
+    <div class="qcard">
+      <div class="decl-tag" id="declTag"></div>
+      <div id="storyLine"></div>
+      <div id="question"></div>
+      <div id="answers"></div>
+    </div>
+  </div>
+
+  <!-- Wave intro -->
+  <div id="waveScreen" class="screen hidden">
+    <h2 id="waveTitle"></h2>
+    <p id="waveDesc"></p>
+    <div class="fact" id="waveFact"></div>
+    <button class="big" id="waveBtn">Kämpfe!</button>
+  </div>
+
+  <!-- End -->
+  <div id="endScreen" class="screen hidden">
+    <h2 id="endTitle"></h2>
+    <p id="endText"></p>
+    <div class="fact" id="endFact"></div>
+    <button class="big" id="restartBtn">Nochmal spielen</button>
+  </div>
+
+  <!-- Weiter nach gewonnenem Kampf -->
+  <div id="contScreen" class="screen hidden">
+    <h2 id="contTitle">🎉 Geschafft!</h2>
+    <p id="contText"></p>
+    <button class="big" id="contBtn">Weiter ▶</button>
+  </div>
+
+  <!-- Neue Waffe erhalten -->
+  <div id="weaponScreen" class="screen hidden">
+    <div class="weapon-pop">
+      <div class="weapon-title">🔥 Goldener Speer erhalten!</div>
+      <svg class="weapon-img" viewBox="0 0 260 130" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#b8860b"/><stop offset="0.5" stop-color="#ffe58a"/><stop offset="1" stop-color="#c79b2e"/>
+          </linearGradient>
+          <radialGradient id="flameG" cx="50%" cy="50%" r="50%">
+            <stop offset="0" stop-color="#fff6c0"/><stop offset="0.5" stop-color="#ff9a2e"/><stop offset="1" stop-color="#ff3b00" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <rect x="22" y="60" width="118" height="9" rx="4" fill="url(#gold)" stroke="#7a5a10" stroke-width="1"/>
+        <polygon points="140,52 186,64.5 140,77" fill="url(#gold)" stroke="#7a5a10" stroke-width="1"/>
+        <circle cx="188" cy="64.5" r="46" fill="url(#flameG)"/>
+        <g class="flame">
+          <polygon points="180,68 198,26 204,52 220,38 210,68" fill="#ff7a1e"/>
+          <polygon points="185,68 196,42 200,55 210,46 205,68" fill="#ffc24a"/>
+          <ellipse cx="192" cy="60" rx="9" ry="15" fill="#fff2b0"/>
+        </g>
+      </svg>
+      <div class="weapon-sub">Dein Speer macht jetzt <b>25 Schaden</b> statt 20!</div>
+    </div>
+  </div>
+
+  <!-- Superattacke -->
+  <div id="superScreen" class="screen hidden">
+    <div id="superWarn" class="hidden">⚠️ ACHTUNG!<br>SUPERATTACKE!</div>
+    <div class="qcard super hidden" id="superCard">
+      <div class="decl-tag super-tag">⚡ SUPERATTACKE! ⚡</div>
+      <div id="superInfo">Der Gegner holt zum vernichtenden Schlag aus – wehre ihn ab! Du hast nur 5 Sekunden!</div>
+      <div id="superTimerBar"><div id="superTimerFill"></div></div>
+      <div id="superQuestion"></div>
+      <div id="superAnswers"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// =================================================================
+//  DATEN: Latein-Deklinationen (alle Formen geprüft)
+// =================================================================
+const CASES = ["nom","gen","dat","akk","abl"];
+const CASE_DE = {nom:"Nominativ", gen:"Genitiv", dat:"Dativ", akk:"Akkusativ", abl:"Ablativ"};
+const NUM_DE  = {sg:"Singular", pl:"Plural"};
+
+// forms[number] = [nom,gen,dat,akk,abl]
+function noun(nom, de, decl, sg, pl){
+  return {nom, de, decl,
+    forms:{ sg:{nom:sg[0],gen:sg[1],dat:sg[2],akk:sg[3],abl:sg[4]},
+            pl:{nom:pl[0],gen:pl[1],dat:pl[2],akk:pl[3],abl:pl[4]} } };
+}
+const NOUNS = [
+  // a-Deklination
+  noun("puella","Mädchen","a-Deklination",["puella","puellae","puellae","puellam","puella"],["puellae","puellarum","puellis","puellas","puellis"]),
+  noun("insula","Insel","a-Deklination",["insula","insulae","insulae","insulam","insula"],["insulae","insularum","insulis","insulas","insulis"]),
+  noun("regina","Königin","a-Deklination",["regina","reginae","reginae","reginam","regina"],["reginae","reginarum","reginis","reginas","reginis"]),
+  noun("nauta","Seemann","a-Deklination",["nauta","nautae","nautae","nautam","nauta"],["nautae","nautarum","nautis","nautas","nautis"]),
+  noun("columna","Säule","a-Deklination",["columna","columnae","columnae","columnam","columna"],["columnae","columnarum","columnis","columnas","columnis"]),
+  // o-Deklination maskulin
+  noun("servus","Sklave","o-Deklination",["servus","servi","servo","servum","servo"],["servi","servorum","servis","servos","servis"]),
+  noun("dominus","Herr","o-Deklination",["dominus","domini","domino","dominum","domino"],["domini","dominorum","dominis","dominos","dominis"]),
+  noun("taurus","Stier","o-Deklination",["taurus","tauri","tauro","taurum","tauro"],["tauri","taurorum","tauris","tauros","tauris"]),
+  noun("amicus","Freund","o-Deklination",["amicus","amici","amico","amicum","amico"],["amici","amicorum","amicis","amicos","amicis"]),
+  noun("murus","Mauer","o-Deklination",["murus","muri","muro","murum","muro"],["muri","murorum","muris","muros","muris"]),
+  // o-Deklination neutrum
+  noun("templum","Tempel","o-Deklination (Neutrum)",["templum","templi","templo","templum","templo"],["templa","templorum","templis","templa","templis"]),
+  noun("bellum","Krieg","o-Deklination (Neutrum)",["bellum","belli","bello","bellum","bello"],["bella","bellorum","bellis","bella","bellis"]),
+  noun("saxum","Fels","o-Deklination (Neutrum)",["saxum","saxi","saxo","saxum","saxo"],["saxa","saxorum","saxis","saxa","saxis"]),
+  // 3. Deklination
+  noun("rex","König","3. Deklination",["rex","regis","regi","regem","rege"],["reges","regum","regibus","reges","regibus"]),
+  noun("miles","Soldat","3. Deklination",["miles","militis","militi","militem","milite"],["milites","militum","militibus","milites","militibus"]),
+  noun("homo","Mensch","3. Deklination",["homo","hominis","homini","hominem","homine"],["homines","hominum","hominibus","homines","hominibus"]),
+  noun("virtus","Tapferkeit","3. Deklination",["virtus","virtutis","virtuti","virtutem","virtute"],["virtutes","virtutum","virtutibus","virtutes","virtutibus"]),
+  noun("corpus","Körper","3. Deklination (Neutrum)",["corpus","corporis","corpori","corpus","corpore"],["corpora","corporum","corporibus","corpora","corporibus"]),
+  // Pronomen is, ea, id (er, sie, es)
+  noun("is","er","Pronomen (is, ea, id)",["is","eius","ei","eum","eo"],["ei","eorum","eis","eos","eis"]),
+  noun("ea","sie","Pronomen (is, ea, id)",["ea","eius","ei","eam","ea"],["eae","earum","eis","eas","eis"]),
+  noun("id","es","Pronomen (is, ea, id)",["id","eius","ei","id","eo"],["ea","eorum","eis","ea","eis"]),
+];
+
+const FACTS = [
+  "Theseus war ein Held aus Athen. Er segelte nach Kreta, um den Minotaurus zu besiegen.",
+  "Der Minotaurus war halb Mensch, halb Stier und lebte tief im Labyrinth.",
+  "Das Labyrinth baute der geniale Erfinder Daedalus – so verwinkelt, dass niemand heraus fand.",
+  "Königstochter Ariadne gab Theseus einen Faden, damit er den Weg zurück fand: der „Ariadnefaden\".",
+  "König Minos herrschte über Kreta und verlangte von Athen regelmäßig Opfer für den Minotaurus.",
+  "Talos war ein riesiger Wächter aus Bronze, der die Insel Kreta dreimal am Tag umrundete.",
+  "Daedalus und sein Sohn Ikarus flohen später mit selbstgebauten Flügeln aus Kreta.",
+  "Die minoische Kultur auf Kreta war eine der ältesten Hochkulturen Europas.",
+];
+const rndFact = () => FACTS[Math.floor(Math.random()*FACTS.length)];
+
+// =================================================================
+//  Frage-Generator
+// =================================================================
+function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+
+const pick = a => a[Math.floor(Math.random()*a.length)];
+
+// ---- Latein-Frage (hard=true: schwerer, für die Boss-Prüfung) ----
+function makeLatinQuestion(level){
+  const hard = (level==="hard"), medium = (level==="medium");
+  let n, num, cas;
+  if(hard){
+    // Schwer (Boss): 3. Deklination + Pronomen is/ea/id, schwierige Fälle, oft Plural.
+    n = pick(NOUNS.filter(x=>x.decl.startsWith("3.") || x.decl.startsWith("Pronomen")));
+    num = Math.random()<0.6 ? "pl":"sg";
+    cas = pick(["gen","dat","abl","akk"]);
+  } else {
+    // is/ea/id öfter dran; sehr leichte Fragen vermeiden (kein triviales Nom. Sg., Nominativ selten).
+    const pronouns = NOUNS.filter(x=>x.decl.startsWith("Pronomen"));
+    let regular  = NOUNS.filter(x=>!x.decl.startsWith("Pronomen"));
+    if(medium) regular = regular.concat(regular.filter(x=>x.decl.startsWith("3.")));  // etwas schwerer: 3. Dekl. doppelt gewichtet
+    n = Math.random()<0.3 ? pick(pronouns) : pick(regular);
+    num = Math.random() < (medium ? 0.4 : 0.5) ? "sg":"pl";   // medium: etwas öfter Plural
+    cas = pick(["gen","dat","akk","abl"]);   // kein Nominativ – das ist die Grundform, zu leicht
+  }
+  const correct = n.forms[num][cas];
+
+  // Falsche Antworten: andere Formen desselben Wortes
+  let pool = [];
+  for(const nn of ["sg","pl"]) for(const c of CASES){
+    const f = n.forms[nn][c];
+    if(f !== correct && !pool.includes(f)) pool.push(f);
+  }
+  shuffle(pool);
+  let opts = pool.slice(0,3);
+  if(opts.length < 3){
+    const extra = NOUNS.filter(x=>x.decl===n.decl && x!==n)
+      .map(x=>x.forms[num][cas]).filter(f=>f!==correct && !opts.includes(f));
+    shuffle(extra);
+    opts = opts.concat(extra).slice(0,3);
+  }
+  opts.push(correct);
+  shuffle(opts);
+  return { kind:"latin", sig:n.nom+"|"+num+"|"+cas, tag:n.decl, prompt:`Wie lautet „${n.nom}\" (${n.de}) im ${CASE_DE[cas]} ${NUM_DE[num]}?`, correct, opts };
+}
+
+// ---- Geschichts-/Mythologie-Frage ----
+const HISTORY = [
+  {q:"Wer baute das berühmte Labyrinth auf Kreta?", a:"Daedalus", d:["Theseus","König Minos","Ikarus"]},
+  {q:"Was war der Minotaurus?", a:"Halb Mensch, halb Stier", d:["Halb Mensch, halb Pferd","Ein riesiger Adler","Eine Meeresschlange"]},
+  {q:"Wer half Theseus mit einem Faden aus dem Labyrinth?", a:"Ariadne", d:["Medea","Helena","Athene"]},
+  {q:"Wie hieß der mächtige König von Kreta?", a:"Minos", d:["Theseus","Daedalus","Odysseus"]},
+  {q:"Aus welchem Material war der Riese Talos, der Kreta bewachte?", a:"Bronze", d:["Stein","Gold","Holz"]},
+  {q:"Womit flohen Daedalus und sein Sohn Ikarus von Kreta?", a:"Mit selbstgebauten Flügeln", d:["Mit einem schnellen Schiff","Auf einem geflügelten Pferd","Durch einen Geheimtunnel"]},
+  {q:"Warum stürzte Ikarus ins Meer?", a:"Er flog zu nah an die Sonne, das Wachs schmolz", d:["Ein Pfeil traf seinen Flügel","Ein Sturm riss ihn herab","Seine Flügel waren zu schwer"]},
+  {q:"Aus welcher Stadt stammte der Held Theseus?", a:"Athen", d:["Sparta","Theben","Troja"]},
+  {q:"Wer war im griechischen Mythos der oberste Gott?", a:"Zeus", d:["Poseidon","Hades","Apollon"]},
+  {q:"Wer war der griechische Gott des Meeres?", a:"Poseidon", d:["Zeus","Hades","Ares"]},
+  {q:"Welche frühe Hochkultur entstand auf Kreta?", a:"Die minoische Kultur", d:["Die römische Kultur","Die ägyptische Kultur","Die keltische Kultur"]},
+  {q:"Wen musste Athen regelmäßig als Opfer nach Kreta schicken?", a:"Junge Menschen für den Minotaurus", d:["Goldschätze für den König","Hundert weiße Stiere","Die schnellsten Pferde"]},
+  {q:"Was bedeutet der „Ariadnefaden\" noch heute?", a:"Eine Hilfe, um aus einer schwierigen Lage herauszufinden", d:["Ein sehr teurer Stoff","Ein magisches Schwert","Ein altes Würfelspiel"]},
+];
+function makeHistoryQuestion(){
+  const i = Math.floor(Math.random()*HISTORY.length);
+  const h = HISTORY[i];
+  return { kind:"hist", sig:"H|"+i, tag:"🏛️ Geschichte & Mythologie", prompt:h.q, correct:h.a, opts:shuffle([h.a, ...h.d]) };
+}
+
+// ---- Schwere Frage für die Boss-Prüfung (vor König Minos) ----
+function makeHardQuestion(){
+  // Schwer: 3. Deklination / Pronomen – Form bilden ODER Form bestimmen (keine leichte Geschichte mehr)
+  return Math.random()<0.5 ? makeLatinQuestion("hard") : makeReverseQuestion(true);
+}
+
+// ---- Umgekehrte Frage: "Welche Form ist X?" – nur eindeutige Formen ----
+function makeReverseQuestion(hard){
+  let n, choices;
+  const rpool = hard ? NOUNS.filter(x=>x.decl.startsWith("3.") || x.decl.startsWith("Pronomen"))   // Boss: nur 3. Dekl. + Pronomen
+                     : NOUNS.concat(NOUNS.filter(x=>x.decl.startsWith("3.")));                       // sonst: 3. Dekl. etwas häufiger
+  for(let a=0; a<25; a++){
+    n = pick(rpool);
+    const counts={}, entries=[];
+    for(const num of ["sg","pl"]) for(const c of CASES){
+      const f=n.forms[num][c]; counts[f]=(counts[f]||0)+1; entries.push({f,c,num});
+    }
+    choices = entries.filter(e=>counts[e.f]===1 && e.c!=="nom");   // eindeutig & kein Nominativ (zu leicht)
+    if(choices.length) break;
+  }
+  if(!choices || !choices.length) return makeLatinQuestion();   // Sicherheitsnetz
+  const e = pick(choices);
+  const correct = CASE_DE[e.c]+" "+NUM_DE[e.num];
+  const allLabels=[];
+  for(const num of ["sg","pl"]) for(const c of CASES) allLabels.push(CASE_DE[c]+" "+NUM_DE[num]);
+  const opts = shuffle([correct, ...shuffle(allLabels.filter(l=>l!==correct)).slice(0,3)]);
+  return { kind:"reverse", sig:n.nom+"|"+e.num+"|"+e.c, tag:n.decl+" – Form bestimmen",
+           prompt:`Welche Form ist „${e.f}\" (von „${n.nom}\", ${n.de})?`, correct, opts };
+}
+
+// ---- Story-Sätze vor jeder Frage (jeder kommt nur einmal dran) ----
+const LATIN_INTROS = [
+  "Die Wachen versperren dir den Weg und verlangen die richtige Form:",
+  "Eine Inschrift an der Labyrinthwand fordert dich auf:",
+  "Der Torwächter knurrt: „Nur wer die Form kennt, darf weiter!\"",
+  "Eine geheimnisvolle Stimme prüft dein Latein:",
+  "An einer steinernen Säule steht eingemeißelt:",
+  "Ein Wächter baut sich vor dir auf und brummt:",
+  "Aus dem Dunkel raunt eine Stimme:",
+  "Ein verstaubtes Schild über dem Gang verlangt:",
+  "Der Boden knarrt bedrohlich – nur die richtige Form öffnet den Weg:",
+  "Eine Schriftrolle in deiner Hand zeigt die Aufgabe:",
+  "Der Minotaurus brüllt in der Ferne. Schnell, die richtige Form:",
+  "Ein Mosaik am Boden formt eine Frage:",
+  "Die Fackeln flackern, als eine Stimme fragt:",
+  "Ein steinerner Löwenkopf an der Wand speit die Frage aus:",
+  "Über einem knarrenden Tor ist gemeißelt:",
+  "Eine Wache mit Speer tritt vor und fordert:",
+  "Im Widerhall der Gänge hörst du die Frage:",
+  "Ein altes Orakel tief im Labyrinth will wissen:",
+];
+const HIST_INTROS = [
+  "Ein alter Priester prüft dein Wissen:",
+  "Die Königstochter Ariadne fragt dich leise:",
+  "Eine Stimme aus dem Dunkel des Labyrinths will wissen:",
+  "Ein weiser Schriftgelehrter stellt dir eine Frage:",
+  "Ein blinder Seher hält dich auf und fragt:",
+  "Daedalus, der Baumeister, flüstert dir zu:",
+  "Eine Tempeldienerin prüft dein Wissen über die Sagen:",
+  "Ein alter Geschichtenerzähler fragt:",
+  "Die Göttin Athene erscheint dir und fragt:",
+  "Ein uraltes Wandbild erwacht und stellt dir eine Frage:",
+];
+// Zieht Sätze ohne Wiederholung; ist die Liste leer, wird neu gemischt.
+let latinIntroQ=[], histIntroQ=[];
+function pickIntro(isHist){
+  if(isHist){ if(histIntroQ.length===0) histIntroQ=shuffle([...HIST_INTROS]); return histIntroQ.pop(); }
+  if(latinIntroQ.length===0) latinIntroQ=shuffle([...LATIN_INTROS]);
+  return latinIntroQ.pop();
+}
+
+// =================================================================
+//  Spielzustand
+// =================================================================
+const G = {
+  progress: 0,
+  hearts: 5,
+  wavesDone: {1:false,2:false,3:false},
+  carryOver: [],        // Typen überlebender Wachen -> Königskampf
+  asked: new Set(),     // bereits gestellte Fragen -> keine Wiederholungen
+  bossQ: 0,             // beantwortete Boss-Prüfungs-Fragen (0..5)
+  state: "intro",
+};
+
+// DOM
+const $ = id => document.getElementById(id);
+const screens = { intro:$("intro"), quiz:$("quiz"), wave:$("waveScreen"), end:$("endScreen"), super:$("superScreen"), cont:$("contScreen"), weapon:$("weaponScreen") };
+function show(name){ for(const k in screens) screens[k].classList.add("hidden"); if(screens[name]) screens[name].classList.remove("hidden"); }
+function showHUD(on){ $("hud").classList.toggle("hidden", !on); }
+
+function updateHUD(){
+  $("hearts").textContent = "❤️".repeat(G.hearts) + "🖤".repeat(5-G.hearts);
+  if(G.state==="bossquiz"){
+    $("progFill").style.width = (G.bossQ/5*100) + "%";
+    $("progLabel").textContent = "Boss-Prüfung: " + G.bossQ + " / 5";
+  } else {
+    $("progFill").style.width = G.progress + "%";
+    $("progLabel").textContent = "Fortschritt: " + G.progress + "%";
+  }
+}
+
+// =================================================================
+//  QUIZ
+// =================================================================
+let curQ = null, answering=false, contNext=null;
+function startQuiz(){
+  G.state="quiz"; showHUD(true); $("waveInfo").textContent="📚 Latein-Aufgaben"; show("quiz"); nextQuestion();
+}
+// "Geschafft!"-Bildschirm mit Weiter-Button (nur nach gewonnenem Kampf)
+function showContinue(title, text, next){
+  contNext = next;
+  $("contTitle").textContent = title;
+  $("contText").textContent = text;
+  G.state="continue"; showHUD(false); show("cont");
+}
+function pickQuestionType(){
+  const r = Math.random();
+  if(r < 0.20) return makeHistoryQuestion();   // 20% Geschichte/Mythologie
+  if(r < 0.60) return makeReverseQuestion();    // 40% "Welche Form ist X?" (Form bestimmen)
+  return makeLatinQuestion("medium");            // 40% Form bilden (etwas schwerer, mit is/ea/id-Bias)
+}
+function nextQuestion(){
+  answering=true; setTimeout(()=>{ answering=false; }, 350);   // kurze Sperre gegen versehentliche Klicks
+  // niemals dieselbe Frage zweimal
+  let tries=0;
+  do { curQ = pickQuestionType(); } while(G.asked.has(curQ.sig) && ++tries<200);
+  G.asked.add(curQ.sig);
+  const isHist = curQ.kind==="hist";
+  $("declTag").textContent = curQ.tag;
+  $("storyLine").textContent = pickIntro(isHist);
+  $("question").innerHTML = curQ.prompt;
+  const box = $("answers"); box.innerHTML="";
+  curQ.opts.forEach(opt=>{
+    const b=document.createElement("button");
+    b.className="ans"; b.textContent=opt;
+    b.onclick=()=>answer(b,opt);
+    box.appendChild(b);
+  });
+  updateHUD();
+}
+function answer(btn, opt){
+  if(answering) return; answering=true;
+  const correct = opt===curQ.correct;
+  const boss = (G.state==="bossquiz");
+  if(correct){
+    btn.classList.add("correct");
+    if(boss){
+      G.bossQ++; updateHUD();
+      setTimeout(()=>{ if(G.bossQ>=5) startWave(5); else nextBossQuestion(); }, 650);
+    } else {
+      G.progress = Math.min(100, G.progress+5);
+      updateHUD();
+      setTimeout(()=>{
+        // Welle auslösen?
+        if(G.progress>=100){ startWave(4); }
+        else if(G.progress>=75 && !G.wavesDone[3]){ startWave(3); }
+        else if(G.progress>=50 && !G.wavesDone[2]){ startWave(2); }
+        else if(G.progress>=25 && !G.wavesDone[1]){ startWave(1); }
+        else nextQuestion();
+      }, 650);
+    }
+  } else {
+    btn.classList.add("wrong");
+    // richtige markieren
+    [...$("answers").children].forEach(c=>{ if(c.textContent===curQ.correct) c.classList.add("correct"); });
+    G.hearts--; updateHUD();
+    setTimeout(()=>{ if(G.hearts<=0) gameOver("hearts"); else (boss ? nextBossQuestion() : nextQuestion()); }, 1000);
+  }
+}
+
+// ---- Boss-Prüfung: 5 schwere, neue Fragen vor König Minos ----
+function startBossQuiz(){
+  combat=null;
+  G.state="bossquiz"; G.bossQ=0;
+  showHUD(true); show("quiz");
+  nextBossQuestion();
+}
+function nextBossQuestion(){
+  answering=true; setTimeout(()=>{ answering=false; }, 350);   // kurze Sperre gegen versehentliche Klicks
+  let tries=0;
+  do {
+    curQ = makeHardQuestion();
+    if(++tries>200) break;   // Notausgang
+  } while(G.asked.has(curQ.sig));
+  G.asked.add(curQ.sig);
+  $("declTag").textContent = "⚔️ Boss-Prüfung – schwer";
+  $("storyLine").textContent = "Die letzte Prüfung vor König Minos – Frage " + (G.bossQ+1) + " von 5:";
+  $("waveInfo").textContent = "⚔️ Boss-Prüfung " + (G.bossQ+1) + "/5";
+  $("question").innerHTML = curQ.prompt;
+  const box = $("answers"); box.innerHTML="";
+  curQ.opts.forEach(opt=>{
+    const b=document.createElement("button");
+    b.className="ans"; b.textContent=opt;
+    b.onclick=()=>answer(b,opt);
+    box.appendChild(b);
+  });
+  updateHUD();
+}
+
+// ---- Frische, noch nicht gestellte Frage ziehen ----
+function freshQuestion(hard){
+  let q, tries=0;
+  do {
+    q = hard ? makeHardQuestion() : (Math.random()<0.3 ? makeHistoryQuestion() : makeLatinQuestion());
+    if(++tries>200) break;
+  } while(G.asked.has(q.sig));
+  G.asked.add(q.sig);
+  return q;
+}
+
+// =================================================================
+//  SUPERATTACKE (mitten im Kampf, 5 Sekunden, Timer pausiert)
+// =================================================================
+let superRAF=0, superDeadline=0, superAnswered=false;
+function triggerSuperAttack(){
+  combat.superDone=true; superAnswered=false;
+  G.state="superquiz";
+  // Erst kurz groß "ACHTUNG! Superattacke!", dann erscheint die Frage.
+  $("superWarn").classList.remove("hidden");
+  $("superCard").classList.add("hidden");
+  show("super");
+  setTimeout(showSuperQuestion, 800);
+}
+function showSuperQuestion(){
+  if(G.state!=="superquiz") return;   // Sicherheit
+  $("superWarn").classList.add("hidden");
+  $("superCard").classList.remove("hidden");
+  curQ = freshQuestion(false);
+  $("superQuestion").innerHTML = curQ.prompt;
+  const box=$("superAnswers"); box.innerHTML="";
+  curQ.opts.forEach(opt=>{
+    const b=document.createElement("button");
+    b.className="ans"; b.textContent=opt;
+    b.onclick=()=>answerSuper(b,opt);
+    box.appendChild(b);
+  });
+  $("superTimerFill").style.width="100%";
+  superDeadline = performance.now()+5000;
+  superRAF = requestAnimationFrame(superTick);
+}
+function superTick(now){
+  const left = superDeadline-now;
+  $("superTimerFill").style.width = Math.max(0,left/5000*100)+"%";
+  if(left<=0){ if(!superAnswered) superFail(); return; }
+  superRAF = requestAnimationFrame(superTick);
+}
+function answerSuper(btn,opt){
+  if(superAnswered) return; superAnswered=true;
+  cancelAnimationFrame(superRAF);
+  if(opt===curQ.correct){
+    btn.classList.add("correct");
+    setTimeout(resumeCombat, 500);
+  } else {
+    btn.classList.add("wrong");
+    [...$("superAnswers").children].forEach(c=>{ if(c.textContent===curQ.correct) c.classList.add("correct"); });
+    setTimeout(superFail, 900);
+  }
+}
+function superFail(){ cancelAnimationFrame(superRAF); gameOver("super"); }
+function resumeCombat(){
+  G.state="combat"; show(null); showHUD(true);
+  lastT = performance.now();   // dt-Sprung nach der Pause vermeiden
+  requestAnimationFrame(loop);
+}
+
+// "Goldener Speer erhalten!"-Animation – friert den Kampf kurz ein, läuft dann automatisch weiter
+function showWeaponGet(){
+  G.state="weaponget";
+  show("weapon");
+  setTimeout(resumeCombat, 2200);
+}
+
+// =================================================================
+//  WELLEN-INTRO
+// =================================================================
+const WAVES = {
+  1: { title:"🛡️ Welle 1 – Die Wächter der Halle", desc:"Zwei Wächter treten nacheinander an – der nächste kommt erst, wenn einer fällt. Sie verfolgen dich nicht, sondern stellen sich dir und greifen an. Überlebe 15 Sekunden." },
+  2: { title:"🏹 Welle 2 – Die Bogenschützen", desc:"Drei Bogenschützen beschießen dich aus der Ferne. Spring hinter die Säulen in Deckung – Pfeile prallen daran ab! Überlebe 15 Sekunden." },
+  3: { title:"⚔️ Welle 3 – Die Stürmer", desc:"Zwei flinke Wachen stürmen direkt auf dich zu! Bleib in Bewegung und schlag zu, sobald sie nah sind. Überlebe 15 Sekunden." },
+  4: { title:"⚔️ ENDKAMPF – Teil 1", desc:"Zuerst kommen die Wachen, die du noch nicht besiegt hast – einzeln nacheinander (je 20 Sekunden). Dann die Elite-Wächter Talos und der Minotaurus – für diesen harten Kampf bekommst du 150 HP! Danach wartet eine letzte Prüfung, bevor du gegen König Minos antrittst." },
+  5: { title:"👑 DER KÖNIG – Minos", desc:"Du hast die Boss-Prüfung bestanden und bist voll geheilt! Jetzt steht dir nur noch König Minos selbst im Weg. Bezwinge ihn mit dem Speer – du hast 2 Minuten. Für deine Freiheit!" },
+};
+let pendingWave=0;
+function startWave(n){
+  pendingWave=n; G.state="wavescreen"; showHUD(false);
+  $("waveTitle").textContent = WAVES[n].title;
+  $("waveDesc").textContent = WAVES[n].desc;
+  $("waveFact").textContent = "Wusstest du? " + rndFact();
+  $("waveInfo").textContent = WAVES[n].title.replace(/^[^A-Za-zÄÖÜ]+/,"");
+  show("wave");
+}
+
+// =================================================================
+//  KAMPF (Canvas)
+// =================================================================
+const cv = $("game"), ctx = cv.getContext("2d");
+const W = cv.width, H = cv.height;
+
+const ETYPE = {
+  rusher:   { hp:55,  speed:165, dmg:10, atkCd:0.8, r:15, color:"#c25b3a", name:"Stürmer" },
+  archer:   { hp:45,  speed:120, dmg:10, atkCd:1.6, r:15, color:"#6a8f4f", name:"Bogenschütze" },
+  guard:    { hp:85,  speed:135, dmg:16, atkCd:1.0, r:16, color:"#4a6d8c", name:"Wächter" },
+  talos:    { hp:200, speed:70,  dmg:15, atkCd:1.4, r:22, color:"#b08d3c", name:"Talos" },
+  bull:     { hp:120, speed:130, dmg:18, atkCd:2.0, r:22, color:"#7a4a2a", name:"Minotaurus" },
+  king:     { hp:500, speed:110, dmg:10, atkCd:1.7, r:30, color:"#7d2e7d", name:"König Minos" },
+};
+
+let combat = null;
+const keys = {};
+const mouse = { x:W/2, y:0, down:false };
+
+function makeEnemy(type, x, y){
+  const t = ETYPE[type];
+  return { type, x, y, hp:t.hp, maxhp:t.hp, atkTimer:0,
+           // bull-spezifisch:
+           chargeCd: 1.5, charging:false, chargeT:0, cdx:0, cdy:0,
+           // king-spezifisch:
+           lungeCd: 3 };
+}
+
+const COLUMNS = [
+  {x:250,y:140,w:34,h:34}, {x:620,y:140,w:34,h:34},
+  {x:250,y:430,w:34,h:34}, {x:620,y:430,w:34,h:34},
+  {x:435,y:285,w:34,h:34},
+];
+
+function startCombat(n){
+  const hasLeftover = n===4 && G.carryOver.length>0;
+  const isBoss = (n===4 || n===5);
+  combat = {
+    wave:n,
+    player:{ x:W/2, y:H-90, r:16, hp:100, maxhp:100, dmg:20, atkCd:0, swing:0, facing:-Math.PI/2 },
+    enemies:[], arrows:[],
+    mode: isBoss ? "boss" : (n===1 ? "sequential" : "timed"),
+    phase: n===5 ? "king" : (n===4 ? (hasLeftover ? "wachen" : "elite") : null),
+    timeLeft: n===5 ? 120 : (n===4 ? 60 : 15),
+    bannerT:0, bannerMsg:"", bannerTitle:"",
+    weaponUpgraded:false, healTimer:15,
+    superDone:false, superIn: 1.0 + Math.random()*1.2,   // Superattacke schon nach 1.0–2.2 s (auch bei schnellen Gegnern)
+    seqQueue: [], wachenQueue: [], shake:0, done:false, msg:"",
+  };
+  // Gegner spawnen
+  if(n===1){ combat.seqQueue=["guard","guard"]; }
+  else if(n===2){ combat.enemies.push(makeEnemy("archer",160,110),makeEnemy("archer",450,80),makeEnemy("archer",740,110)); }
+  else if(n===3){ combat.enemies.push(makeEnemy("rusher",300,110),makeEnemy("rusher",600,110)); }
+  else if(n===4){
+    combat.wachenQueue = [...G.carryOver];   // übrig gebliebene Wachen kommen einzeln nacheinander
+    // Direkt zu den Elite-Wächtern? Dann 150 HP für diesen harten Kampf.
+    if(!hasLeftover){ combat.player.maxhp=150; combat.player.hp=150; combat.enemies.push(makeEnemy("talos",300,150), makeEnemy("bull",600,150)); }
+  }
+  else if(n===5){   // Königskampf nach der Boss-Prüfung
+    combat.bannerT=1.8; combat.bannerMsg="König Minos betritt die Arena!";
+    combat.enemies.push(makeEnemy("king",W/2,120));
+  }
+  stickMove.active=false; stickMove.id=null; stickAim.active=false; stickAim.id=null;   // Touch zurücksetzen
+  G.state="combat"; showHUD(true); show(null);
+  lastT = performance.now();
+  requestAnimationFrame(loop);
+}
+
+// ---- Eingabe ----
+window.addEventListener("keydown", e=>{ keys[e.key.toLowerCase()]=true; });
+window.addEventListener("keyup",   e=>{ keys[e.key.toLowerCase()]=false; });
+cv.addEventListener("mousemove", e=>{
+  const r=cv.getBoundingClientRect();
+  mouse.x=(e.clientX-r.left)*(W/r.width);
+  mouse.y=(e.clientY-r.top)*(H/r.height);
+});
+cv.addEventListener("mousedown", e=>{ if(e.button===0) mouse.down=true; });
+window.addEventListener("mouseup", e=>{ if(e.button===0) mouse.down=false; });
+
+// ---- Touch-Steuerung (Handy/Tablet): linke Hälfte = laufen, rechte Hälfte = zielen + schlagen ----
+const stickMove = { id:null, ox:0, oy:0, x:0, y:0, active:false };
+const stickAim  = { id:null, ox:0, oy:0, x:0, y:0, active:false };
+function touchToCanvas(t){
+  const r=cv.getBoundingClientRect();
+  return { x:(t.clientX-r.left)*(W/r.width), y:(t.clientY-r.top)*(H/r.height) };
+}
+cv.addEventListener("touchstart", e=>{
+  e.preventDefault();
+  for(const t of e.changedTouches){
+    const c=touchToCanvas(t);
+    if(c.x < W/2 && !stickMove.active){ Object.assign(stickMove,{id:t.identifier,ox:c.x,oy:c.y,x:c.x,y:c.y,active:true}); }
+    else if(c.x >= W/2 && !stickAim.active){ Object.assign(stickAim,{id:t.identifier,ox:c.x,oy:c.y,x:c.x,y:c.y,active:true}); }
+  }
+}, {passive:false});
+cv.addEventListener("touchmove", e=>{
+  e.preventDefault();
+  for(const t of e.changedTouches){
+    const c=touchToCanvas(t);
+    if(t.identifier===stickMove.id){ stickMove.x=c.x; stickMove.y=c.y; }
+    else if(t.identifier===stickAim.id){ stickAim.x=c.x; stickAim.y=c.y; }
+  }
+}, {passive:false});
+function endTouch(e){
+  e.preventDefault();
+  for(const t of e.changedTouches){
+    if(t.identifier===stickMove.id){ stickMove.active=false; stickMove.id=null; }
+    else if(t.identifier===stickAim.id){ stickAim.active=false; stickAim.id=null; }
+  }
+}
+cv.addEventListener("touchend", endTouch, {passive:false});
+cv.addEventListener("touchcancel", endTouch, {passive:false});
+
+// ---- Kollision Kreis/Rechteck ----
+function resolveCircleRects(o, rects){
+  for(const c of rects){
+    const cx=Math.max(c.x, Math.min(o.x, c.x+c.w));
+    const cy=Math.max(c.y, Math.min(o.y, c.y+c.h));
+    const dx=o.x-cx, dy=o.y-cy; const d=Math.hypot(dx,dy);
+    if(d < o.r && d>0.0001){ const push=o.r-d; o.x+=dx/d*push; o.y+=dy/d*push; }
+    else if(d===0){ o.x += o.r; }
+  }
+}
+function pointInRects(x,y,rects){ return rects.some(c=>x>=c.x&&x<=c.x+c.w&&y>=c.y&&y<=c.y+c.h); }
+
+// ---- Update ----
+let lastT=0;
+function loop(now){
+  if(G.state!=="combat") return;
+  let dt=(now-lastT)/1000; lastT=now; if(dt>0.05) dt=0.05;
+  update(dt); draw();
+  requestAnimationFrame(loop);
+}
+
+function update(dt){
+  const C=combat, p=C.player;
+  if(C.done) return;
+
+  // Spielerbewegung – linker Touch-Joystick ODER Tastatur
+  let mx=0,my=0;
+  if(stickMove.active){
+    mx=stickMove.x-stickMove.ox; my=stickMove.y-stickMove.oy;
+    if(Math.hypot(mx,my)<10){ mx=0; my=0; }   // Deadzone
+  } else {
+    if(keys["w"]||keys["arrowup"]) my-=1;
+    if(keys["s"]||keys["arrowdown"]) my+=1;
+    if(keys["a"]||keys["arrowleft"]) mx-=1;
+    if(keys["d"]||keys["arrowright"]) mx+=1;
+  }
+  if(mx||my){ const l=Math.hypot(mx,my); p.x+=mx/l*200*dt; p.y+=my/l*200*dt; }
+  p.x=Math.max(p.r,Math.min(W-p.r,p.x)); p.y=Math.max(p.r,Math.min(H-p.r,p.y));
+  resolveCircleRects(p, COLUMNS);
+
+  // Zielen – rechter Touch-Joystick (zielt + schlägt), sonst Maus
+  let firing=false;
+  if(stickAim.active){
+    const ax=stickAim.x-stickAim.ox, ay=stickAim.y-stickAim.oy;
+    if(Math.hypot(ax,ay)>12){ p.facing=Math.atan2(ay,ax); firing=true; }
+  }
+  if(!firing){
+    if(stickMove.active && (mx||my)) p.facing=Math.atan2(my,mx);   // auf Touch: in Laufrichtung schauen
+    else p.facing=Math.atan2(mouse.y-p.y, mouse.x-p.x);            // am PC: zur Maus schauen
+  }
+
+  // Angriff – linke Maustaste (PC) oder rechter Joystick (Touch)
+  p.atkCd-=dt; if(p.swing>0) p.swing-=dt;
+  if((mouse.down || firing) && p.atkCd<=0){
+    p.atkCd=0.4; p.swing=0.18;
+    const reach=58, arc=Math.PI*0.7;
+    for(const e of C.enemies){
+      const dx=e.x-p.x, dy=e.y-p.y, d=Math.hypot(dx,dy);
+      if(d<reach+ETYPE[e.type].r){
+        let ang=Math.atan2(dy,dx); let diff=Math.abs(((ang-p.facing+Math.PI)%(2*Math.PI))-Math.PI);
+        if(diff<arc){ e.hp-=p.dmg; }
+      }
+    }
+  }
+
+  // Sequenzielle Welle: nächsten spawnen
+  if(C.mode==="sequential" && C.enemies.length===0 && C.seqQueue.length>0){
+    const tp=C.seqQueue.shift(); combat.enemies.push(makeEnemy(tp, W/2, 90));
+  }
+
+  // Gegner-KI
+  for(const e of C.enemies){
+    const t=ETYPE[e.type];
+    e.atkTimer-=dt;
+    const dx=p.x-e.x, dy=p.y-e.y, dist=Math.hypot(dx,dy)||1;
+
+    if(e.type==="archer"){
+      // Bleibt fest auf seinem Platz stehen und schießt nur aus der Ferne.
+      if(e.atkTimer<=0){
+        e.atkTimer=t.atkCd;
+        C.arrows.push({x:e.x,y:e.y, vx:dx/dist*300, vy:dy/dist*300, dmg:t.dmg});
+      }
+    } else if(e.type==="guard"){
+      // Wächter: rückt einmal vor, bleibt dann stehen und greift mit Speer-Reichweite an – verfolgt aber NICHT.
+      if(!e.planted){ e.x+=dx/dist*t.speed*dt; e.y+=dy/dist*t.speed*dt; if(dist<=50) e.planted=true; }
+      if(e.planted && dist<70 && e.atkTimer<=0){ e.atkTimer=t.atkCd; p.hp-=t.dmg; C.shake=0.16; }
+    } else if(e.type==="bull"){
+      e.chargeCd-=dt;
+      if(e.charging){
+        e.chargeT-=dt;
+        e.x+=e.cdx*460*dt; e.y+=e.cdy*460*dt;
+        if(e.chargeT<=0) e.charging=false;
+      } else {
+        if(e.chargeCd<=0 && dist<420){ e.charging=true; e.chargeT=0.5; e.chargeCd=2.4;
+          e.cdx=dx/dist; e.cdy=dy/dist; }
+        else { e.x+=dx/dist*t.speed*dt; e.y+=dy/dist*t.speed*dt; }
+      }
+    } else if(e.type==="king"){
+      // König Minos bleibt stehen, dreht sich aber zum Spieler und schlägt mit dem Gladius zu (verfolgt nicht).
+      // Reichweite 92 >= Spieler-Reichweite (88), damit es keinen sicheren Schlag-Punkt gibt.
+      if(dist<92 && e.atkTimer<=0){ e.atkTimer=t.atkCd; p.hp-=t.dmg; C.shake=0.2; }
+    } else {
+      // rusher / talos: auf den Spieler zu
+      e.x+=dx/dist*t.speed*dt; e.y+=dy/dist*t.speed*dt;
+    }
+
+    e.x=Math.max(t.r,Math.min(W-t.r,e.x)); e.y=Math.max(t.r,Math.min(H-t.r,e.y));
+    resolveCircleRects({get x(){return e.x},set x(v){e.x=v},get y(){return e.y},set y(v){e.y=v}, r:t.r}, COLUMNS);
+
+    // Nahkampfschaden an Spieler
+    const nd=Math.hypot(p.x-e.x,p.y-e.y);
+    const contact = e.charging ? t.r+p.r+4 : t.r+p.r+2;
+    if(nd<contact && e.atkTimer<=0 && e.type!=="archer" && e.type!=="guard" && e.type!=="king"){
+      e.atkTimer = e.charging? 0.6 : t.atkCd;
+      p.hp -= t.dmg; C.shake=0.18;
+      if(e.charging){ e.charging=false; }
+    }
+  }
+  // tote Gegner entfernen
+  C.enemies = C.enemies.filter(e=>e.hp>0);
+
+  // Pfeile
+  for(const a of C.arrows){ a.x+=a.vx*dt; a.y+=a.vy*dt; }
+  C.arrows = C.arrows.filter(a=>{
+    if(a.x<0||a.x>W||a.y<0||a.y>H) return false;
+    if(pointInRects(a.x,a.y,COLUMNS)) return false;
+    if(Math.hypot(a.x-p.x,a.y-p.y) < p.r){ p.hp-=a.dmg; C.shake=0.15; return false; }
+    return true;
+  });
+
+  if(C.shake>0) C.shake-=dt;
+  if(C.bannerT>0) C.bannerT-=dt;   // Übergangs-Einblendung läuft immer aus
+
+  // Spieler tot?
+  if(p.hp<=0){ p.hp=0; C.done=true; gameOver("killed"); return; }
+
+  // Zufällige Superattacke – einmal pro Kampf, solange noch Gegner da sind. Pausiert den Kampf.
+  if(!C.superDone){
+    if(C.superIn>0) C.superIn-=dt;
+    if(C.superIn<=0){ triggerSuperAttack(); return; }   // garantiert in jedem Kampf
+  }
+
+  // Timer / Siegbedingungen
+  if(C.mode==="boss"){
+    if(C.phase==="wachen"){
+      // übrige Wachen kommen einzeln nacheinander – je 20 Sekunden
+      if(C.enemies.length===0 && C.wachenQueue.length>0){
+        const tp=C.wachenQueue.shift(); C.enemies.push(makeEnemy(tp, W/2, 220));
+        C.timeLeft=20;   // für jede Wache wieder 20 Sekunden
+      }
+      C.timeLeft-=dt;
+      if(C.enemies.length===0 && C.wachenQueue.length===0){ C.phase="trans1"; C.bannerT=1.6; C.bannerMsg="Die Elite-Wächter erscheinen!"; p.hp=p.maxhp; }
+      else if(C.timeLeft<=0){ C.done=true; gameOver("time"); return; }
+    } else if(C.phase==="trans1"){
+      // Für Talos + Minotaurus: 150 HP, voll geheilt.
+      if(C.bannerT<=0){ C.phase="elite"; C.timeLeft=60; p.maxhp=150; p.hp=150; C.enemies.push(makeEnemy("talos",300,150),makeEnemy("bull",600,150)); }
+    } else if(C.phase==="elite"){
+      C.timeLeft-=dt;
+      if(C.enemies.length===0){ C.done=true; showContinue("🎉 Wächter besiegt!", "Stark gekämpft! Jetzt kommt die letzte Prüfung, bevor du gegen König Minos antrittst.", startBossQuiz); return; }   // Wächter besiegt -> Boss-Prüfung
+      else if(C.timeLeft<=0){ C.done=true; gameOver("time"); return; }
+    } else { // king (Welle 5, nach der Boss-Prüfung)
+      C.timeLeft-=dt;
+      const king = C.enemies.find(e=>e.type==="king");
+      if(!king){ C.done=true; victory(); return; }
+      // Neue Waffe, sobald Minos auf 250 HP ist
+      if(!C.weaponUpgraded && king.hp<=250){
+        C.weaponUpgraded=true; p.dmg=25;
+        showWeaponGet(); return;   // Animation "Goldener Speer erhalten!"
+      }
+      // Alle 15 Sekunden 10 HP heilen
+      C.healTimer-=dt;
+      if(C.healTimer<=0){ C.healTimer=15; p.hp=Math.min(p.maxhp, p.hp+10); }
+      if(C.timeLeft<=0){ C.done=true; gameOver("time"); return; }
+    }
+  } else {
+    C.timeLeft-=dt;
+    // Zeit-Wellen (Stürmer/Bogenschützen) laufen IMMER die vollen 20 Sekunden -> Timer bleibt sichtbar.
+    // Nur die sequenzielle Wächter-Welle endet, sobald alle besiegt sind.
+    const seqDone = (C.mode==="sequential" && C.enemies.length===0 && C.seqQueue.length===0);
+    if(C.timeLeft<=0 || seqDone){ C.done=true; waveCleared(); return; }
+  }
+}
+
+function waveCleared(){
+  const C=combat;
+  // überlebende + nicht gespawnte -> carryOver
+  C.enemies.forEach(e=> G.carryOver.push(e.type));
+  C.seqQueue.forEach(tp=> G.carryOver.push(tp));
+  G.wavesDone[C.wave]=true;
+  combat=null;
+  showContinue("🎉 Welle geschafft!", "Du hast die Welle überstanden! Klick auf Weiter, wenn du bereit für die nächsten Aufgaben bist.", startQuiz);
+}
+
+// ---- Deko-Zeichnungen ----
+function drawTorch(x,y){
+  // Lichtschein
+  const g=ctx.createRadialGradient(x,y,4,x,y,80);
+  g.addColorStop(0,"rgba(255,180,80,0.30)"); g.addColorStop(1,"rgba(255,180,80,0)");
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,80,0,7); ctx.fill();
+  // Halterung
+  ctx.fillStyle="#4a3320"; ctx.fillRect(x-3,y,6,28);
+  // Flamme (flackert)
+  const f=Math.random()*5;
+  ctx.fillStyle="#e8731f"; ctx.beginPath(); ctx.ellipse(x,y-4,8,15+f,0,0,7); ctx.fill();
+  ctx.fillStyle="#ffc24a"; ctx.beginPath(); ctx.ellipse(x,y-4,4.5,9+f*0.6,0,0,7); ctx.fill();
+}
+function drawBorder(){
+  ctx.strokeStyle="#9c5a3c"; ctx.lineWidth=10; ctx.strokeRect(6,6,W-12,H-12);
+  ctx.strokeStyle="#e9c46a"; ctx.lineWidth=2; ctx.strokeRect(14,14,W-28,H-28);
+  ctx.fillStyle="#9c5a3c";
+  for(let x=24;x<W-32;x+=40){ ctx.fillRect(x,8,18,6); ctx.fillRect(x,H-14,18,6); }
+  for(let y=24;y<H-32;y+=40){ ctx.fillRect(8,y,6,18); ctx.fillRect(W-14,y,6,18); }
+}
+
+// ---- Touch-Joystick zeichnen ----
+function drawStick(j, color){
+  if(!j.active) return;
+  ctx.globalAlpha=0.55;
+  ctx.fillStyle="rgba(0,0,0,0.30)"; ctx.beginPath(); ctx.arc(j.ox,j.oy,48,0,7); ctx.fill();
+  ctx.strokeStyle=color; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(j.ox,j.oy,48,0,7); ctx.stroke();
+  let dx=j.x-j.ox, dy=j.y-j.oy; const l=Math.hypot(dx,dy)||1; const m=Math.min(l,48);
+  ctx.fillStyle=color; ctx.beginPath(); ctx.arc(j.ox+dx/l*m, j.oy+dy/l*m, 22, 0,7); ctx.fill();
+  ctx.globalAlpha=1;
+}
+
+// ---- Zeichnen ----
+function draw(){
+  const C=combat; if(!C) return;
+  ctx.save();
+  if(C.shake>0){ ctx.translate((Math.random()-0.5)*8,(Math.random()-0.5)*8); }
+
+  // Boden
+  ctx.fillStyle="#cdba8e"; ctx.fillRect(0,0,W,H);
+  // Bodenfugen
+  ctx.strokeStyle="rgba(120,100,70,0.25)"; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=60){ ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke(); }
+  for(let y=0;y<H;y+=60){ ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke(); }
+
+  // Fackeln in den Ecken (Lichtschein)
+  drawTorch(34,40); drawTorch(W-34,40); drawTorch(34,H-72); drawTorch(W-34,H-72);
+  // Vignette für Stimmung
+  const vg=ctx.createRadialGradient(W/2,H/2,H*0.30,W/2,H/2,H*0.85);
+  vg.addColorStop(0,"rgba(0,0,0,0)"); vg.addColorStop(1,"rgba(25,12,6,0.5)");
+  ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
+  // Griechischer Rahmen
+  drawBorder();
+
+  // Säulen
+  for(const c of COLUMNS){
+    ctx.fillStyle="#8a8270"; ctx.fillRect(c.x-6,c.y-6,c.w+12,c.h+12);
+    ctx.fillStyle="#efe9d6"; ctx.fillRect(c.x,c.y,c.w,c.h);
+    ctx.strokeStyle="#b7ad90"; ctx.lineWidth=2;
+    for(let i=1;i<4;i++){ ctx.beginPath();ctx.moveTo(c.x+i*c.w/4,c.y);ctx.lineTo(c.x+i*c.w/4,c.y+c.h);ctx.stroke(); }
+  }
+
+  const p=C.player;
+  // Pfeile
+  for(const a of C.arrows){
+    ctx.strokeStyle="#3a2a1a"; ctx.lineWidth=3; const an=Math.atan2(a.vy,a.vx);
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(a.x-Math.cos(an)*12,a.y-Math.sin(an)*12); ctx.stroke();
+  }
+
+  // Gegner (von oben nach unten gezeichnet -> Tiefe)
+  const sortedEnemies = [...C.enemies].sort((a,b)=>a.y-b.y);
+  for(const e of sortedEnemies){
+    const t=ETYPE[e.type];
+    // Schatten
+    ctx.fillStyle="rgba(0,0,0,0.22)"; ctx.beginPath(); ctx.ellipse(e.x,e.y+t.r*0.8,t.r*1.05,t.r*0.4,0,0,7);ctx.fill();
+    // Angriffs-Aura beim Stürmen
+    if(e.charging){ ctx.fillStyle="rgba(255,70,30,0.35)"; ctx.beginPath(); ctx.arc(e.x,e.y,t.r+7,0,7); ctx.fill(); }
+    // Körper (Kreis) mit 3D-Glanz
+    ctx.fillStyle=t.color; ctx.beginPath(); ctx.arc(e.x,e.y,t.r,0,7); ctx.fill();
+    const sh=ctx.createRadialGradient(e.x-t.r*0.35,e.y-t.r*0.4,t.r*0.15,e.x,e.y,t.r);
+    sh.addColorStop(0,"rgba(255,255,255,0.30)"); sh.addColorStop(0.6,"rgba(255,255,255,0)"); sh.addColorStop(1,"rgba(0,0,0,0.30)");
+    ctx.fillStyle=sh; ctx.beginPath(); ctx.arc(e.x,e.y,t.r,0,7); ctx.fill();
+    ctx.strokeStyle="rgba(0,0,0,0.45)"; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(e.x,e.y,t.r,0,7); ctx.stroke();
+
+    // Waffe – zeigt zum Spieler (Minotaurus kämpft mit Hörnern, hat keine)
+    const wa = Math.atan2(p.y-e.y, p.x-e.x);
+    if(e.type==="rusher" || e.type==="guard"){      // Speer (lang, unübersehbar)
+      const back=e.x-Math.cos(wa)*(t.r+3), backY=e.y-Math.sin(wa)*(t.r+3);
+      const wl=t.r+18, hx=e.x+Math.cos(wa)*wl, hy=e.y+Math.sin(wa)*wl;
+      ctx.lineCap="round";
+      ctx.strokeStyle="#241405"; ctx.lineWidth=5;   // dunkle Kontur
+      ctx.beginPath(); ctx.moveTo(back,backY); ctx.lineTo(hx,hy); ctx.stroke();
+      ctx.strokeStyle="#8a5a2a"; ctx.lineWidth=3;    // Holzschaft
+      ctx.beginPath(); ctx.moveTo(back,backY); ctx.lineTo(hx,hy); ctx.stroke();
+      ctx.lineCap="butt";
+      ctx.fillStyle="#eef2f7"; ctx.strokeStyle="#33414f"; ctx.lineWidth=1.2;  // Metallspitze
+      ctx.beginPath();
+      ctx.moveTo(e.x+Math.cos(wa)*(wl+7), e.y+Math.sin(wa)*(wl+7));
+      ctx.lineTo(e.x+Math.cos(wa+0.45)*(wl-2), e.y+Math.sin(wa+0.45)*(wl-2));
+      ctx.lineTo(e.x+Math.cos(wa-0.45)*(wl-2), e.y+Math.sin(wa-0.45)*(wl-2));
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    } else if(e.type==="talos"){                     // schwere Keule
+      const wl=t.r+12, hx=e.x+Math.cos(wa)*wl, hy=e.y+Math.sin(wa)*wl;
+      ctx.strokeStyle="#5a4a2a"; ctx.lineWidth=5;
+      ctx.beginPath(); ctx.moveTo(e.x,e.y); ctx.lineTo(hx,hy); ctx.stroke();
+      ctx.fillStyle="#9a7a32"; ctx.beginPath(); ctx.arc(hx,hy,9,0,7); ctx.fill();     // Keulenkopf
+      ctx.strokeStyle="#3a2a10"; ctx.lineWidth=1.5; ctx.stroke();
+    } else if(e.type==="king"){                      // Gladius (Schwert)
+      const base=t.r*0.4, wl=t.r+26;
+      const sx=e.x+Math.cos(wa)*base, sy=e.y+Math.sin(wa)*base;
+      const hx=e.x+Math.cos(wa)*wl, hy=e.y+Math.sin(wa)*wl;
+      ctx.strokeStyle="#e3e7ee"; ctx.lineWidth=4;
+      ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(hx,hy); ctx.stroke();
+      const gx=e.x+Math.cos(wa)*(base+4), gy=e.y+Math.sin(wa)*(base+4);   // Parierstange
+      ctx.strokeStyle="#c79b2e"; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.moveTo(gx+Math.cos(wa+Math.PI/2)*7, gy+Math.sin(wa+Math.PI/2)*7); ctx.lineTo(gx+Math.cos(wa-Math.PI/2)*7, gy+Math.sin(wa-Math.PI/2)*7); ctx.stroke();
+    }
+
+    // Erkennungszeichen je Typ
+    if(e.type==="archer"){ // kleiner Bogen
+      ctx.strokeStyle="#2a1a0e"; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.arc(e.x,e.y,t.r+5,-1.05,1.05); ctx.stroke();
+      const ax=e.x+Math.cos(-1.05)*(t.r+5), ay=e.y+Math.sin(-1.05)*(t.r+5);
+      const bx=e.x+Math.cos(1.05)*(t.r+5), by=e.y+Math.sin(1.05)*(t.r+5);
+      ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx,by); ctx.stroke();
+    }
+    if(e.type==="talos"){ // Bronzewächter: Nieten + Leuchtaugen
+      ctx.fillStyle="#6b531f";
+      for(let a=0;a<8;a++){ const an=a*Math.PI/4; ctx.beginPath(); ctx.arc(e.x+Math.cos(an)*t.r*0.62,e.y+Math.sin(an)*t.r*0.62,2.1,0,7); ctx.fill(); }
+      ctx.fillStyle="#ffe08a"; ctx.beginPath(); ctx.arc(e.x-6,e.y-2,2.6,0,7); ctx.arc(e.x+6,e.y-2,2.6,0,7); ctx.fill();
+    }
+    if(e.type==="bull"){ // Stierkopf: Hörner, Augen, Nasenring
+      ctx.strokeStyle="#f3ede0"; ctx.lineWidth=4; ctx.lineCap="round";
+      ctx.beginPath(); ctx.moveTo(e.x-t.r*0.75,e.y-t.r*0.55); ctx.quadraticCurveTo(e.x-t.r*1.35,e.y-t.r*1.0,e.x-t.r*1.0,e.y-t.r*1.55); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(e.x+t.r*0.75,e.y-t.r*0.55); ctx.quadraticCurveTo(e.x+t.r*1.35,e.y-t.r*1.0,e.x+t.r*1.0,e.y-t.r*1.55); ctx.stroke();
+      ctx.lineCap="butt";
+      ctx.fillStyle="#1a0f08"; ctx.beginPath(); ctx.arc(e.x-5,e.y-3,2.4,0,7); ctx.arc(e.x+5,e.y-3,2.4,0,7); ctx.fill();
+      ctx.strokeStyle="#e9c46a"; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(e.x,e.y+t.r*0.45,3.2,0,7); ctx.stroke();
+    }
+    if(e.type==="king"){ // goldene Krone
+      const cw=t.r*1.5, cx=e.x-cw/2, cy=e.y-t.r-13, ch=13;
+      ctx.fillStyle="#f1c453";
+      ctx.beginPath(); ctx.moveTo(cx,cy+ch);
+      ctx.lineTo(cx,cy); ctx.lineTo(cx+cw*0.25,cy+ch*0.55); ctx.lineTo(cx+cw*0.5,cy);
+      ctx.lineTo(cx+cw*0.75,cy+ch*0.55); ctx.lineTo(cx+cw,cy); ctx.lineTo(cx+cw,cy+ch);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle="#a8801f"; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.fillStyle="#e63946"; ctx.beginPath(); ctx.arc(e.x,cy+ch*0.65,2.6,0,7); ctx.fill();
+    }
+
+    // HP-Balken
+    const bw=t.r*2.2;
+    const off = e.type==="king" ? 28 : (e.type==="bull" ? 22 : 13);
+    const by0 = e.y - t.r - off;
+    ctx.fillStyle="rgba(0,0,0,0.7)"; ctx.fillRect(e.x-bw/2,by0,bw,6);
+    ctx.fillStyle="#e63946"; ctx.fillRect(e.x-bw/2,by0,bw*(e.hp/e.maxhp),6);
+    ctx.strokeStyle="rgba(0,0,0,0.5)"; ctx.lineWidth=1; ctx.strokeRect(e.x-bw/2,by0,bw,6);
+    if(e.type==="king"||e.type==="talos"||e.type==="bull"){
+      ctx.fillStyle="#fff"; ctx.font="bold 12px sans-serif"; ctx.textAlign="center";
+      ctx.fillText(t.name, e.x, by0-6);
+    }
+  }
+
+  // Spieler
+  ctx.fillStyle="rgba(0,0,0,0.18)"; ctx.beginPath(); ctx.ellipse(p.x,p.y+p.r*0.7,p.r,p.r*0.4,0,0,7);ctx.fill();
+  ctx.fillStyle="#2a9d8f"; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,7); ctx.fill();
+  ctx.strokeStyle="#1e6e63"; ctx.lineWidth=3; ctx.stroke();
+  // Blickrichtung: helle Front, die sich mit der Maus dreht
+  ctx.fillStyle="#d8f5f0";
+  ctx.beginPath();
+  ctx.arc(p.x,p.y,p.r,p.facing-0.7,p.facing+0.7);
+  ctx.arc(p.x,p.y,p.r-6,p.facing+0.7,p.facing-0.7,true);
+  ctx.closePath(); ctx.fill();
+  // zwei kleine Augen in Blickrichtung
+  ctx.fillStyle="#143b36";
+  for(const o of [-0.32,0.32]){
+    ctx.beginPath();
+    ctx.arc(p.x+Math.cos(p.facing+o)*(p.r-4), p.y+Math.sin(p.facing+o)*(p.r-4), 2.2, 0, 7);
+    ctx.fill();
+  }
+  // Speer (golden, sobald die neue Waffe da ist)
+  const upgraded = p.dmg>20;
+  const sl = (p.swing>0 ? 46 : 34) + (upgraded?6:0);
+  const sa = p.facing + (p.swing>0 ? Math.sin(p.swing*18)*0.5 : 0);
+  ctx.strokeStyle = upgraded ? "#c79b2e" : "#5a3d22"; ctx.lineWidth = upgraded?5:4;
+  ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x+Math.cos(sa)*sl,p.y+Math.sin(sa)*sl); ctx.stroke();
+  ctx.fillStyle = upgraded ? "#ffe08a" : "#cfcfcf"; // Speerspitze
+  ctx.beginPath(); ctx.arc(p.x+Math.cos(sa)*sl,p.y+Math.sin(sa)*sl, upgraded?5:4, 0,7); ctx.fill();
+  if(upgraded){
+    // Feuer an der Speerspitze (nur Optik, flackert)
+    const tx=p.x+Math.cos(sa)*sl, ty=p.y+Math.sin(sa)*sl;
+    const fl = 5 + Math.sin(performance.now()/70)*2 + Math.random()*3;
+    const g = ctx.createRadialGradient(tx,ty,1, tx,ty, 15+fl);
+    g.addColorStop(0,"rgba(255,245,190,0.95)");
+    g.addColorStop(0.45,"rgba(255,150,40,0.6)");
+    g.addColorStop(1,"rgba(255,80,0,0)");
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(tx,ty,15+fl,0,7); ctx.fill();
+    ctx.fillStyle="rgba(255,200,80,0.9)";
+    for(let i=-1;i<=1;i++){
+      const a2=sa+i*0.4, len=9+Math.random()*9;
+      ctx.beginPath();
+      ctx.moveTo(tx+Math.cos(sa)*3, ty+Math.sin(sa)*3);
+      ctx.lineTo(tx+Math.cos(a2)*len, ty+Math.sin(a2)*len);
+      ctx.lineTo(tx+Math.cos(a2+0.25)*len*0.55, ty+Math.sin(a2+0.25)*len*0.55);
+      ctx.closePath(); ctx.fill();
+    }
+  }
+  if(p.swing>0){ ctx.strokeStyle="rgba(255,255,255,0.5)"; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(p.x,p.y,52,sa-0.6,sa+0.6); ctx.stroke(); }
+
+  ctx.restore();
+
+  // HUD-Text (Timer / HP)
+  ctx.fillStyle="#1d1730"; ctx.fillRect(0,H-30,W,30);
+  ctx.fillStyle="#444"; ctx.fillRect(14,H-22,220,14);
+  ctx.fillStyle="#2a9d8f"; ctx.fillRect(14,H-22,220*(p.hp/p.maxhp),14);
+  ctx.fillStyle="#fff"; ctx.font="13px sans-serif"; ctx.textAlign="left";
+  ctx.fillText("HP "+Math.ceil(p.hp), 18, H-11);
+  ctx.textAlign="center";
+  if(C.mode!=="boss"){
+    ctx.fillStyle="#caa"; ctx.font="bold 15px sans-serif";
+    ctx.fillText("Überlebe, bis die Zeit abläuft!", W/2, H-10);
+  } else if(C.phase==="wachen"){
+    ctx.fillStyle="#e9c46a"; ctx.font="bold 15px sans-serif";
+    ctx.fillText("⚔️ Besiege die übrigen Wachen!", W/2, H-10);
+  } else if(C.phase==="elite"){
+    ctx.fillStyle="#e9c46a"; ctx.font="bold 15px sans-serif";
+    ctx.fillText("⚔️ Besiege die Elite-Wächter!", W/2, H-10);
+  } else if(C.phase==="king"){
+    const king=C.enemies.find(e=>e.type==="king");
+    ctx.fillStyle="#e9c46a"; ctx.font="bold 15px sans-serif";
+    ctx.fillText("👑 König Minos: "+(king?Math.ceil(king.hp):0)+" HP", W/2, H-10);
+  }
+  ctx.textAlign="right"; ctx.fillStyle="#caa"; ctx.font="12px sans-serif";
+  ctx.fillText("Gegner: "+C.enemies.length, W-14, H-11);
+  ctx.textAlign="left";
+
+  // Großer Countdown oben in der Mitte
+  let secsLeft = (C.mode!=="boss" || C.phase==="wachen" || C.phase==="elite" || C.phase==="king") ? C.timeLeft : null;
+  if(secsLeft!==null){
+    const secs=Math.ceil(Math.max(0,secsLeft));
+    ctx.font="bold 30px 'Trebuchet MS',sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
+    const label="⏱ "+secs+" s";
+    const tw=ctx.measureText(label).width;
+    ctx.fillStyle="rgba(20,12,30,0.82)"; ctx.fillRect(W/2-tw/2-16, 58, tw+32, 42);
+    ctx.strokeStyle="rgba(233,196,106,0.6)"; ctx.lineWidth=2; ctx.strokeRect(W/2-tw/2-16, 58, tw+32, 42);
+    ctx.fillStyle = secs<=5 ? "#ff6b6b" : "#e9c46a";
+    ctx.fillText(label, W/2, 80);
+    ctx.textBaseline="alphabetic"; ctx.textAlign="left";
+  }
+
+  // Heilungs-/Übergangs-Einblendung vor dem Königskampf
+  if(C.bannerT>0){
+    ctx.fillStyle="rgba(0,0,0,0.6)"; ctx.fillRect(0,H/2-48,W,96);
+    const isWeapon = !!C.bannerTitle;
+    ctx.fillStyle = isWeapon ? "#e9c46a" : "#2a9d8f"; ctx.font="bold 30px 'Trebuchet MS',sans-serif"; ctx.textAlign="center";
+    ctx.fillText(C.bannerTitle || "💚 Voll geheilt!", W/2, H/2-6);
+    ctx.fillStyle = isWeapon ? "#ffd98a" : "#e9c46a"; ctx.font="bold 22px 'Trebuchet MS',sans-serif";
+    ctx.fillText(C.bannerMsg || "König Minos betritt die Arena!", W/2, H/2+26);
+    ctx.textAlign="left";
+  }
+
+  // Touch-Joysticks (Handy/Tablet)
+  drawStick(stickMove, "#2a9d8f");
+  drawStick(stickAim, "#e76f51");
+}
+
+// =================================================================
+//  ENDE
+// =================================================================
+function gameOver(reason){
+  G.state="end"; showHUD(false); combat=null;
+  let t,x;
+  if(reason==="hearts"){ t="💔 Alle Herzen verloren!"; x="Zu viele falsche Antworten – das Labyrinth hat dich behalten. Übe die Deklinationen und versuch es nochmal!"; }
+  else if(reason==="time"){ t="⏱ Zeit abgelaufen!"; x="Du hast es nicht rechtzeitig geschafft, deine Gegner zu besiegen. Beim nächsten Mal schneller zuschlagen!"; }
+  else if(reason==="super"){ t="⚡ Superattacke nicht abgewehrt!"; x="Du hast die Frage nicht rechtzeitig richtig beantwortet – der Schlag hat dich erwischt. Versuch es nochmal!"; }
+  else { t="☠️ Du wurdest besiegt!"; x="Die Wachen waren diesmal zu stark. Sammle dich und stell dich ihnen erneut!"; }
+  $("endTitle").textContent = t;
+  $("endText").textContent = x;
+  $("endFact").textContent = "Tipp: " + rndFact();
+  show("end");
+}
+function victory(){
+  G.state="end"; showHUD(false); combat=null;
+  $("endTitle").textContent = "🏆 Du hast König Minos besiegt!";
+  $("endText").textContent = "Mit Speer und Latein hast du dich aus dem Labyrinth befreit – wie einst Theseus! Glückwunsch, du beherrschst die Deklinationen.";
+  $("endFact").textContent = "Wusstest du? " + rndFact();
+  show("end");
+}
+
+// =================================================================
+//  BUTTONS
+// =================================================================
+$("introFact").textContent = "Wusstest du? " + rndFact();
+$("startBtn").onclick = ()=> startQuiz();
+$("waveBtn").onclick = ()=> startCombat(pendingWave);
+$("contBtn").onclick = ()=>{ const fn=contNext; contNext=null; if(fn) fn(); };
+$("restartBtn").onclick = ()=>{
+  G.progress=0; G.hearts=5; G.wavesDone={1:false,2:false,3:false}; G.carryOver=[]; G.asked.clear(); G.bossQ=0; latinIntroQ=[]; histIntroQ=[];
+  $("introFact").textContent = "Wusstest du? " + rndFact();
+  startQuiz();
+};
+</script>
+</body>
+</html>
