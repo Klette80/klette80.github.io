@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 560" role="img" aria-labelledby="title desc">
+  <title id="title">Gallia zur Zeit Caesars</title>
+  <desc id="desc">Original gezeichnete Pergamentkarte mit Provinzen, Flüssen und den historischen Ankern des Feldzugs.</desc>
+  <defs>
+    <style>
+      .land{fill:#b9b487;stroke:#51442c;stroke-width:2.2}.water{fill:#6f8a90}
+      .border{fill:none;stroke:#685937;stroke-width:1.2;stroke-dasharray:8 7;opacity:.72}
+      .tribal{fill:none;stroke:#675b42;stroke-width:.8;stroke-dasharray:2 5;opacity:.52}
+      .river{fill:none;stroke:#627e86;stroke-width:3.2}.province{fill:#50452f;opacity:.72;font:700 17px Georgia,serif;letter-spacing:.22em;text-anchor:middle}
+      .tribe{fill:#574a34;font:italic 12px Georgia,serif;text-anchor:middle}.marker{fill:#24372e;stroke:#e3c46a;stroke-width:2}
+    </style>
+  </defs>
+  <rect class="water" width="760" height="560"/>
+  <path class="land" d="M174 84 252 45 363 55 445 91 542 92 620 145 648 221 625 298 662 374 614 459 540 522 438 529 350 502 266 512 201 460 137 409 91 323 104 242 74 183 109 119Z"/>
+  <path class="land" d="M104 42 184 15 315 20 367 52 318 75 220 72 155 92 86 78Z"/>
+  <path class="border" d="M148 164C250 137 356 140 470 122M170 329C275 296 382 299 579 270M277 471C344 409 436 386 617 390M516 103C517 213 535 305 611 455"/>
+  <path class="tribal" d="M208 118 238 246 174 335M307 71 329 221 280 340 312 480M403 82 404 246 466 333 423 510M493 99 474 204 565 289 529 471"/>
+  <path class="river" d="M562 91C536 154 555 214 536 273S557 397 604 475M465 88C437 173 460 228 425 302S367 405 392 507M158 290C264 278 342 289 513 324M172 388C274 368 366 382 509 417"/>
+  <text class="province" x="213" y="56">BRITANNIA</text><text class="province" x="415" y="145">BELGICA</text>
+  <text class="province" x="315" y="335">CELTICA</text><text class="province" x="210" y="449">AQVITANIA</text>
+  <text class="tribe" x="191" y="212">Veneti</text><text class="tribe" x="484" y="180">Eburones</text>
+  <text class="tribe" x="543" y="241">Treveri</text><text class="tribe" x="461" y="365">Aedui</text>
+  <text class="tribe" x="344" y="398">Arverni</text><text class="tribe" x="520" y="442">Helvetii</text>
+  <g aria-label="Feldzugsanker">
+    <circle class="marker" cx="547" cy="430" r="8"/><circle class="marker" cx="612" cy="344" r="8"/>
+    <circle class="marker" cx="532" cy="496" r="8"/><circle class="marker" cx="425" cy="139" r="8"/>
+    <circle class="marker" cx="519" cy="150" r="8"/><circle class="marker" cx="154" cy="218" r="8"/>
+    <circle class="marker" cx="603" cy="139" r="8"/><circle class="marker" cx="246" cy="48" r="8"/>
+    <circle class="marker" cx="131" cy="50" r="8"/><circle class="marker" cx="508" cy="193" r="8"/>
+    <circle class="marker" cx="565" cy="250" r="8"/><circle class="marker" cx="481" cy="258" r="8"/>
+    <circle class="marker" cx="362" cy="366" r="8"/><circle class="marker" cx="442" cy="310" r="9"/>
+  </g>
+</svg>

@@ -4,6 +4,7 @@ Eine statische Plattform für fachlich fundierte, erzählerische Browsergames im
 
 ## Enthaltene Spiele
 
+- **Imperium Verborum**: Historisches Latein-Strategiespiel zur Verbkonjugation im Gallischen Krieg.
 - **Orpheus: Die Kasus der Unterwelt**: Latein-Lernspiel zu Deklinationen und antiker Mythologie.
 - **Das Labyrinth von Kreta**: Latein-Abenteuer zu Deklinationen und Mythologie (Theseus, Minotaurus).
 - **NaTu-Quest**: Quiz-Abenteuer für Natur & Technik / Biologie (Klasse 5 & 6).

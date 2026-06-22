@@ -158,7 +158,7 @@ footer nav a:focus-visible::after {
 .hero-media {
   position: absolute;
   inset: 0 0 0 28%;
-  background: url("site-assets/orpheus-hero.png") center 44% / cover no-repeat;
+  background: url("imperium-verborum/assets/story/liber-vii-03-march-to-alesia.webp") center 45% / cover no-repeat;
 }
 
 .hero-media::before {
